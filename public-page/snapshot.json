@@ -8,8 +8,8 @@
     "ruc": "10742038551",
     "group": "Sinteria Group",
     "coverage": "Lima · otros destinos previa coordinación",
-    "hero": "./assets/fiesta-hero.png",
-    "heroIsConcept": true
+    "hero": "./media/117021.jpg",
+    "heroIsConcept": false
   },
   "socials": {
     "facebook": "https://www.facebook.com/share/1C4UkSgPaq/",
@@ -32,7 +32,7 @@
       "featured": false,
       "published": true,
       "format": "plan",
-      "image": "/media/e433fab8-c3f0-4c3c-89fb-6f17fd69c4a6"
+      "image": "./media/117017.jpg"
     },
     {
       "id": "hora-loca-2",
@@ -49,7 +49,7 @@
       "featured": true,
       "published": true,
       "format": "plan",
-      "image": "/media/f71b9236-2f93-430d-9f0a-e3805ec6d404"
+      "image": "./media/117021.jpg"
     },
     {
       "id": "hora-loca-3",
@@ -66,7 +66,7 @@
       "featured": false,
       "published": true,
       "format": "plan",
-      "image": "/media/a51b1ab7-a115-4e2c-9245-b077186d062f"
+      "image": "./media/117024.jpg"
     }
   ],
   "gallery": [
