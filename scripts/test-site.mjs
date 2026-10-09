@@ -1,0 +1,158 @@
+import assert from 'node:assert/strict';
+import { randomBytes, pbkdf2Sync } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import { handleSiteAPI } from '../lib/site-api.ts';
+import { defaultContent, validateContent, youtubeEmbed, whatsappLink } from '../lib/content.ts';
+import { SITE_LIMITS } from '../lib/limits.ts';
+
+const require = createRequire(new URL('../node_modules/.pnpm/node_modules/miniflare/package.json', import.meta.url));
+const { Miniflare } = require('miniflare');
+const mf = new Miniflare({ modules: true, script: 'export default {fetch(){return new Response("test")}}', compatibilityDate: '2026-05-15', d1Databases: ['DB'], r2Buckets: ['BUCKET'], cf: false });
+let count = 0;
+const check = (value, description) => { assert.ok(value, description); count++; };
+try {
+  const DB = await mf.getD1Database('DB'), BUCKET = await mf.getR2Bucket('BUCKET');
+  for (const migration of ['0000_majestic_dexter_bennett.sql', '0001_careless_charles_xavier.sql']) {
+    const sql = await readFile(new URL('../drizzle/' + migration, import.meta.url), 'utf8');
+    for (const statement of sql.split('--> statement-breakpoint')) await DB.prepare(statement.trim()).run();
+  }
+  const salt = randomBytes(16).toString('hex');
+  const env = { DB, BUCKET, ADMIN_EMAIL: 'admin@example.test', ADMIN_PASSWORD_HASH: `pbkdf2$100000$${salt}$${pbkdf2Sync('test-only-password', salt, 100000, 32, 'sha256').toString('hex')}` };
+  const origin = 'https://sinteria.test';
+  async function call(path, {method = 'GET', data, cookie, originHeader = origin, body, headers = {}, environment = env} = {}) {
+    const reqHeaders = { ...headers, ...(method !== 'GET' && method !== 'HEAD' ? { Origin: originHeader } : {}), ...(cookie ? {Cookie: cookie} : {}), ...(data ? {'Content-Type': 'application/json'} : {}) };
+    return await handleSiteAPI(new Request(`${origin}${path}`, { method, headers: reqHeaders, ...(body ? {body} : data ? {body: JSON.stringify(data)} : {}) }), environment);
+  }
+  let result = await call('/api/site');
+  check(result.status === 200, 'Public catalog is available without admin login');
+  check((await result.json()).content.brand.whatsapp === '51952391268', 'Correct business WhatsApp');
+  check((await call('/api/admin/content')).status === 401, 'Anonymous admin read rejected');
+  check((await call('/api/admin/content', {method: 'PUT', data: {content: defaultContent, revision: 0}})).status === 401, 'Anonymous write rejected');
+  check((await call('/api/admin/login', {method:'POST', data:{email:env.ADMIN_EMAIL,password:'test-only-password'},originHeader:'https://attacker.test'})).status === 403, 'Cross-origin login rejected');
+  check((await call('/api/admin/login', {method:'POST', data:{email:env.ADMIN_EMAIL,password:'incorrect'}})).status === 401, 'Incorrect password rejected');
+  result = await call('/api/admin/login', {method:'POST',data:{email:env.ADMIN_EMAIL,password:'test-only-password'}});
+  check(result.status === 200, 'Password login succeeds');
+  const setCookie = result.headers.get('set-cookie');
+  check(setCookie.includes('HttpOnly') && setCookie.includes('Secure') && setCookie.includes('SameSite=Lax'), 'Secure server session cookie');
+  const cookie = setCookie.split(';')[0];
+  check((await call('/api/admin/content', {cookie})).status === 200, 'Authenticated admin reads content');
+  const session = await DB.prepare('SELECT token_hash FROM admin_sessions').first();
+  check(session.token_hash !== cookie.split('=')[1], 'Only a hash of the session is stored');
+  const state = structuredClone(defaultContent);
+  state.packages[0].price = 199;
+  state.packages[2].published = false;
+  result = await call('/api/admin/content', {method:'PUT',cookie,data:{content:state,revision:0}});
+  check(result.status === 200 && (await result.json()).revision === 1, 'Content saved durably with revision');
+  result = await call('/api/site');
+  const publicState = await result.json();
+  check(publicState.content.packages[0].price === 199, 'Independent visitor sees saved price');
+  check(publicState.content.packages.length === 2, 'Hidden services excluded from public response');
+  check((await call('/api/admin/content',{method:'PUT',cookie,data:{content:state,revision:0}})).status === 409, 'Concurrent first save cannot overwrite');
+  const malformed = structuredClone(state); malformed.brand.hero = 'javascript:alert(1)';
+  check((await call('/api/admin/content',{method:'PUT',cookie,data:{content:malformed,revision:1}})).status === 400, 'Unsafe media URLs rejected');
+  const invalidPrice = structuredClone(state); invalidPrice.packages[0].price = -5;
+  check(!validateContent(invalidPrice), 'Negative prices rejected');
+  check(youtubeEmbed('https://www.youtube.com/shorts/AbCde123_-x') === 'https://www.youtube-nocookie.com/embed/AbCde123_-x', 'YouTube Shorts supported');
+  check(!youtubeEmbed('https://youtube.com.attacker.test/watch?v=AbCde123_-x'), 'Untrusted YouTube hosts rejected');
+  check(whatsappLink('51952391268','Hola, evento & fiesta').includes('Hola%2C%20evento%20%26%20fiesta'), 'WhatsApp message is safely encoded');
+  const fake = new FormData(); fake.append('file', new File(['not an image'], 'fake.png', {type:'image/png'}));
+  check((await call('/api/admin/upload',{method:'POST',cookie,body:fake})).status === 400, 'Invalid upload format rejected');
+  const bytes = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000b49444154789c636000020000050001a5f645400000000049454e44ae426082','hex');
+  const form = new FormData(); form.append('file',new File([bytes],'test.png',{type:'image/png'}));
+  result = await call('/api/admin/upload',{method:'POST',cookie,body:form});
+  check(result.status === 200, 'Image upload writes to shared file storage');
+  const uploaded = await result.json();
+  check((await call(uploaded.url)).status === 404, 'Unpublished uploaded file stays private');
+  check((await call(uploaded.url,{cookie})).status === 200, 'Admin can preview unpublished upload');
+  state.gallery.push({id:'test-media',title:'Test event image',category:'Hora loca',kind:'image',url:uploaded.url,published:true});
+  check((await call('/api/admin/content',{method:'PUT',cookie,data:{content:state,revision:1}})).status === 200, 'Uploaded photo published with catalog');
+  result = await call(uploaded.url);
+  check(result.status === 200 && Buffer.from(await result.arrayBuffer()).equals(bytes), 'Independent visitor retrieves exact uploaded photo');
+  result = await call(uploaded.url,{headers:{Range:'bytes=0-7'}});
+  check(result.status === 206 && result.headers.get('content-range') === `bytes 0-7/${bytes.length}` && (await result.arrayBuffer()).byteLength === 8, 'Media range requests work for video seeking');
+  check((await call(uploaded.url,{headers:{Range:'bytes=9999-'}})).status === 416, 'Invalid media range rejected');
+  check((await call('/api/admin/assets/'+uploaded.id,{method:'DELETE',cookie})).status === 409, 'Referenced media cannot be deleted');
+  check((await call('/api/admin/content',{method:'PUT',cookie,data:{content:state,revision:1}})).status === 409, 'Older revision cannot replace a newer save');
+  state.gallery[0].published = false;
+  check((await call('/api/admin/content',{method:'PUT',cookie,data:{content:state,revision:2}})).status === 200, 'Publication can be hidden');
+  check((await call(uploaded.url)).status === 404, 'Hidden media protected from direct anonymous access');
+  state.gallery = [];
+  check((await call('/api/admin/content',{method:'PUT',cookie,data:{content:state,revision:3}})).status === 200, 'Publication removed without deleting archive');
+  check((await call('/api/admin/assets/'+uploaded.id,{method:'DELETE',cookie})).status === 200, 'Unused asset can be deleted');
+
+  async function uploadFile(bytes, name, mime, environment = env) {
+    const form = new FormData(); form.append('file', new File([bytes], name, {type: mime}));
+    return call('/api/admin/upload', {method:'POST',cookie,body:form,environment});
+  }
+  async function saveContent(content) {
+    const current = await (await call('/api/admin/content',{cookie})).json();
+    return call('/api/admin/content',{method:'PUT',cookie,data:{content,revision:current.revision}});
+  }
+  const limits = await (await call('/api/admin/assets',{cookie})).json();
+  check(limits.limits.uploadStopBytes === 225 * 1048576 && limits.limits.videoSeconds === 60, 'Panel receives the enforced preventive limits');
+  const shortVideo = await readFile(new URL('./fixtures/short.mp4', import.meta.url));
+  result = await uploadFile(shortVideo, 'short.mp4', 'video/mp4');
+  const clip = await result.json();
+  check(result.status === 200 && clip.duration === 2, 'A complete short MP4 uploads and reports its measured duration');
+  result = await uploadFile(await readFile(new URL('./fixtures/short.webm', import.meta.url)), 'short.webm', 'video/webm');
+  const webm = await result.json();
+  check(result.status === 200 && webm.duration === 2, 'WebM duration is read from container metadata');
+  for (const extension of ['mp4', 'webm']) {
+    check((await uploadFile(await readFile(new URL(`./fixtures/long.${extension}`, import.meta.url)), `long.${extension}`, `video/${extension}`)).status === 413, `A 61-second ${extension} is rejected by the server`);
+  }
+  check((await uploadFile(Buffer.from('0000002066747970' + '00'.repeat(24),'hex'), 'unknown.mp4', 'video/mp4')).status === 400, 'A video without measurable duration is rejected');
+  const oversizedPhoto = Buffer.alloc(SITE_LIMITS.imageBytes + 1); bytes.copy(oversizedPhoto);
+  check((await uploadFile(oversizedPhoto, 'oversized.png', 'image/png')).status === 413, 'Image byte limit is enforced by the server');
+  const oversizedVideo = Buffer.alloc(SITE_LIMITS.videoBytes + 1); shortVideo.copy(oversizedVideo);
+  check((await uploadFile(oversizedVideo, 'oversized.mp4', 'video/mp4')).status === 413, 'Video byte limit is enforced by the server');
+  result = await uploadFile(bytes, 'poster.png', 'image/png');
+  const poster = await result.json();
+  state.gallery = [{id:'test-clip',title:'Clip completo',category:'Hora loca',kind:'video',url:clip.url,poster:poster.url,published:true}];
+  check((await saveContent(state)).status === 200, 'A video with its separate preview can be published');
+  check((await call(poster.url)).status === 200, 'Independent visitor can retrieve a published video preview');
+  check((await call('/api/admin/assets/'+poster.id,{method:'DELETE',cookie})).status === 409, 'A referenced video preview cannot be removed');
+  state.gallery[0].published = false;
+  await saveContent(state);
+  check((await call(poster.url)).status === 404 && (await call(clip.url)).status === 404, 'Hiding a clip also protects its preview');
+  state.gallery = [];
+  state.packages[0].format = 'personaje'; state.packages[0].image = poster.url;
+  check((await saveContent(state)).status === 200 && (await call(poster.url)).status === 200, 'A character catalog can publish an image outside the gallery');
+  check((await call('/api/admin/assets/'+poster.id,{method:'DELETE',cookie})).status === 409, 'A catalog photo is protected from accidental deletion');
+  state.packages[0].published = false;
+  await saveContent(state);
+  check((await call(poster.url)).status === 404, 'Hidden catalog photos stay private');
+  state.packages[0].published = true;
+  const invalidCatalog = structuredClone(state); invalidCatalog.packages[0].image = 'javascript:alert(1)';
+  check((await saveContent(invalidCatalog)).status === 400, 'Unsafe catalog photos are rejected');
+  const missingPoster = structuredClone(state); missingPoster.gallery = [{id:'missing',title:'Unavailable',category:'Video',kind:'video',url:clip.url,poster:'/media/00000000-0000-0000-0000-000000000000',published:true}];
+  check((await saveContent(missingPoster)).status === 400, 'Missing preview assets prevent a broken publication');
+  delete state.packages[0].image;
+  await saveContent(state);
+  for (const asset of [clip,webm,poster]) await call('/api/admin/assets/'+asset.id,{method:'DELETE',cookie});
+
+  const dummy = '11111111-1111-4111-8111-111111111111';
+  await DB.prepare("INSERT INTO media_assets (id,mime,size,name,created_at) VALUES (?,'image/png',?,'quota fixture',?)").bind(dummy,SITE_LIMITS.uploadStopBytes - bytes.length,Date.now()).run();
+  const simultaneous = await Promise.all([uploadFile(bytes,'first.png','image/png'),uploadFile(bytes,'second.png','image/png')]);
+  check(simultaneous.map(r=>r.status).sort().join(',') === '200,413', 'Concurrent uploads reserve space atomically and only one can fit');
+  const atQuota = await (await call('/api/admin/assets',{cookie})).json();
+  check(atQuota.assets.reduce((n,a)=>n+a.size,0) === SITE_LIMITS.uploadStopBytes, 'Total stored and pending files never exceed the preventive cap');
+  const moreCatalogs = structuredClone(state); moreCatalogs.packages.push({...state.packages[0],id:'new-combo',name:'Combo especial',format:'combo'});
+  check((await saveContent(moreCatalogs)).status === 413, 'New catalogs are blocked when the storage cap is reached');
+  state.packages[0].price = 210;
+  check((await saveContent(state)).status === 200, 'Existing catalog prices can still be edited at the cap');
+  for (const asset of atQuota.assets) await call('/api/admin/assets/'+asset.id,{method:'DELETE',cookie});
+  check((await uploadFile(bytes,'space-restored.png','image/png')).status === 200, 'Deleting unused files restores upload capacity');
+  const beforeFailure = await DB.prepare('SELECT COUNT(*) AS count FROM media_assets').first();
+  const failedStorage = {put:async()=>{throw Error('Test storage failure');},delete:BUCKET.delete.bind(BUCKET)};
+  check((await uploadFile(bytes,'failure.png','image/png',{...env,BUCKET:failedStorage})).status === 500, 'Storage failure returns an error instead of a false success');
+  const afterFailure = await DB.prepare('SELECT COUNT(*) AS count FROM media_assets').first();
+  check(afterFailure.count === beforeFailure.count, 'A failed upload releases its storage reservation');
+  const tooManyCatalogs = structuredClone(state); tooManyCatalogs.packages = Array.from({length:SITE_LIMITS.catalogs+1},(_,i)=>({...state.packages[0],id:'catalog-'+i}));
+  check((await saveContent(tooManyCatalogs)).status === 400, 'The catalog count limit is enforced by the server');
+  check((await call('/api/admin/logout',{method:'POST',cookie})).status === 200, 'Admin logout works');
+  check((await call('/api/admin/content',{cookie})).status === 401, 'Revoked cookie cannot be reused');
+  for (let i=0;i<10;i++) await call('/api/admin/login',{method:'POST',data:{email:env.ADMIN_EMAIL,password:'bad'}});
+  check((await call('/api/admin/login',{method:'POST',data:{email:env.ADMIN_EMAIL,password:'bad'}})).status === 429, 'Login attempts are rate limited');
+  process.stdout.write(`${count} functional and security checks passed.\n`);
+} finally { await mf.dispose(); }
