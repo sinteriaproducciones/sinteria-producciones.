@@ -1,0 +1,255 @@
+{
+  "brand": {
+    "headline": "Que tu fiesta",
+    "highlight": "se vuelva inolvidable.",
+    "description": "Horas locas, personajes y shows que encienden la celebración. Tú pon la fecha. Nosotros, la diversión.",
+    "whatsapp": "51952391268",
+    "email": "sinteria.produciones@gmail.com",
+    "ruc": "10742038551",
+    "group": "Sinteria Group",
+    "coverage": "Lima · otros destinos previa coordinación",
+    "hero": "./assets/fiesta-hero.png",
+    "heroIsConcept": true
+  },
+  "socials": {
+    "facebook": "https://www.facebook.com/share/1C4UkSgPaq/",
+    "tiktok": "https://www.tiktok.com/@sinteria.producci",
+    "instagram": ""
+  },
+  "packages": [
+    {
+      "id": "hora-loca-1",
+      "name": "La chispa",
+      "subtitle": "1 personaje",
+      "category": "Hora loca",
+      "description": "El toque de energía que transforma tu celebración y pone a todos en modo fiesta.",
+      "price": 180,
+      "includes": [
+        "1 personaje a elección disponible",
+        "Show para tu celebración",
+        "Coordinación personalizada"
+      ],
+      "featured": false,
+      "published": true,
+      "format": "plan",
+      "image": "/media/e433fab8-c3f0-4c3c-89fb-6f17fd69c4a6"
+    },
+    {
+      "id": "hora-loca-2",
+      "name": "Fiesta en dúo",
+      "subtitle": "2 personajes",
+      "category": "Hora loca",
+      "description": "Dos personajes, más interacción y un momento que tus invitados van a recordar.",
+      "price": 280,
+      "includes": [
+        "2 personajes a elección disponibles",
+        "Show para tu celebración",
+        "Coordinación personalizada"
+      ],
+      "featured": true,
+      "published": true,
+      "format": "plan",
+      "image": "/media/f71b9236-2f93-430d-9f0a-e3805ec6d404"
+    },
+    {
+      "id": "hora-loca-3",
+      "name": "Modo celebración",
+      "subtitle": "3 personajes",
+      "category": "Hora loca",
+      "description": "Una combinación de personajes para llevar la energía de tu evento al siguiente nivel.",
+      "price": 380,
+      "includes": [
+        "3 personajes a elección disponibles",
+        "Show para tu celebración",
+        "Coordinación personalizada"
+      ],
+      "featured": false,
+      "published": true,
+      "format": "plan",
+      "image": "/media/a51b1ab7-a115-4e2c-9245-b077186d062f"
+    }
+  ],
+  "gallery": [
+    {
+      "id": "sinteria-19dfabe8114a65fef22533ed",
+      "title": "Cuy listo para la fiesta",
+      "category": "Personajes",
+      "kind": "image",
+      "url": "./media/117017.jpg",
+      "published": true,
+      "isConcept": false
+    },
+    {
+      "id": "sinteria-3c853d6b1028a517efff5f71",
+      "title": "Personaje verde en acción",
+      "category": "Personajes",
+      "kind": "video",
+      "url": "./media/119874.mp4",
+      "published": true,
+      "isConcept": false,
+      "poster": "./media/119874.jpg"
+    },
+    {
+      "id": "sinteria-7737c699b090103ed13702d5",
+      "title": "Hora loca con dos personajes",
+      "category": "Horas locas",
+      "kind": "image",
+      "url": "./media/117018.jpg",
+      "published": true,
+      "isConcept": false
+    },
+    {
+      "id": "sinteria-397beee53341dfca41554ce7",
+      "title": "Baile con personajes de pelo rubio",
+      "category": "Shows",
+      "kind": "video",
+      "url": "./media/119875.mp4",
+      "published": true,
+      "isConcept": false,
+      "poster": "./media/119875.jpg"
+    },
+    {
+      "id": "sinteria-09d7eea343527e7b0eb84a81",
+      "title": "Tiburón azul en acción",
+      "category": "Personajes",
+      "kind": "image",
+      "url": "./media/117019.jpg",
+      "published": true,
+      "isConcept": false
+    },
+    {
+      "id": "sinteria-5fa1657c7c98eeb30ee5b296",
+      "title": "Hora loca con tiburón azul",
+      "category": "Horas locas",
+      "kind": "video",
+      "url": "./media/119876.mp4",
+      "published": true,
+      "isConcept": false,
+      "poster": "./media/119876.jpg"
+    },
+    {
+      "id": "sinteria-2e03c519dd1441c8f01c9799",
+      "title": "Alegría entre amigos",
+      "category": "Horas locas",
+      "kind": "image",
+      "url": "./media/117020.jpg",
+      "published": true,
+      "isConcept": false
+    },
+    {
+      "id": "sinteria-9214f742b96ea0cdf9abbb49",
+      "title": "Show de baile en la celebración",
+      "category": "Shows",
+      "kind": "video",
+      "url": "./media/119877.mp4",
+      "published": true,
+      "isConcept": false,
+      "poster": "./media/119877.jpg"
+    },
+    {
+      "id": "sinteria-ab7ba5f1e1029584302a305d",
+      "title": "Dúo urbano",
+      "category": "Personajes",
+      "kind": "image",
+      "url": "./media/117021.jpg",
+      "published": true,
+      "isConcept": false
+    },
+    {
+      "id": "sinteria-c5bf795fa5ab02f6580d85a7",
+      "title": "Trío urbano en la pista",
+      "category": "Personajes",
+      "kind": "video",
+      "url": "./media/119878.mp4",
+      "published": true,
+      "isConcept": false,
+      "poster": "./media/119878.jpg"
+    },
+    {
+      "id": "sinteria-ad58bc5832e1a066b9e7a36b",
+      "title": "Hora loca de cumpleaños",
+      "category": "Horas locas",
+      "kind": "image",
+      "url": "./media/117022.jpg",
+      "published": true,
+      "isConcept": false
+    },
+    {
+      "id": "sinteria-2aa24b1c10d7afa0c5fb0e32",
+      "title": "Personajes y baile con invitados",
+      "category": "Horas locas",
+      "kind": "video",
+      "url": "./media/119879.mp4",
+      "published": true,
+      "isConcept": false,
+      "poster": "./media/119879.jpg"
+    },
+    {
+      "id": "sinteria-a431fa648350d98a614225ad",
+      "title": "Personajes en la celebración",
+      "category": "Horas locas",
+      "kind": "image",
+      "url": "./media/117023.jpg",
+      "published": true,
+      "isConcept": false
+    },
+    {
+      "id": "sinteria-359dfd29e857b93f4f8a1119",
+      "title": "Hora loca entre amigos",
+      "category": "Horas locas",
+      "kind": "video",
+      "url": "./media/119880.mp4",
+      "published": true,
+      "isConcept": false,
+      "poster": "./media/119880.jpg"
+    },
+    {
+      "id": "sinteria-418a5ac4f2806c408b8ba04e",
+      "title": "Trío urbano",
+      "category": "Personajes",
+      "kind": "image",
+      "url": "./media/117024.jpg",
+      "published": true,
+      "isConcept": false
+    },
+    {
+      "id": "sinteria-d6948912ec1d9b854f10a322",
+      "title": "Personaje con traje azul en acción",
+      "category": "Personajes",
+      "kind": "video",
+      "url": "./media/119881.mp4",
+      "published": true,
+      "isConcept": false,
+      "poster": "./media/119881.jpg"
+    },
+    {
+      "id": "sinteria-17d3f05fac4b917924b5fd31",
+      "title": "Personaje verde",
+      "category": "Personajes",
+      "kind": "image",
+      "url": "./media/117025.jpg",
+      "published": true,
+      "isConcept": false
+    },
+    {
+      "id": "sinteria-ba5592333cc64cd37ce85b4e",
+      "title": "Fiesta y animación en vivo",
+      "category": "Horas locas",
+      "kind": "video",
+      "url": "./media/119882.mp4",
+      "published": true,
+      "isConcept": false,
+      "poster": "./media/119882.jpg"
+    },
+    {
+      "id": "sinteria-938835345c5a4498f49e39b7",
+      "title": "Todos a la pista de baile",
+      "category": "Horas locas",
+      "kind": "video",
+      "url": "./media/119883.mp4",
+      "published": true,
+      "isConcept": false,
+      "poster": "./media/119883.jpg"
+    }
+  ]
+}

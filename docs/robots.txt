@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://sinteriaproducciones.github.io/sinteria-producciones./sitemap.xml

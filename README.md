@@ -1,7 +1,7 @@
 # Sinteria Producciones
 
-Etapa 2: web de presentación y panel administrativo para catálogos, precios,
-fotos, videos, portada, contacto y redes. Perteneciente a Sinteria Group.
+Publicación actual: web pública estática con catálogo, precios, fotos, videos,
+contacto y redes. El panel administrativo queda para una etapa posterior. Perteneciente a Sinteria Group.
 Diseño actualizado: fondos claros, fucsia, turquesa, amarillo y morado,
 con detalles de carnaval y una composición adaptada a celular y PC.
 
@@ -12,9 +12,10 @@ con detalles de carnaval y una composición adaptada a celular y PC.
 - Cuenta GitHub verificada del propietario: `sinteriaproducciones`.
   El código se guarda en [sinteriaproducciones/sinteria-producciones.](https://github.com/sinteriaproducciones/sinteria-producciones.).
   La cuenta está asociada a sinteriaproducciones@gmail.com.
-- Web pública: https://sinteria-producciones.genrrytm16.chatgpt.site
-- Panel privado: https://sinteria-producciones.genrrytm16.chatgpt.site/admin
-- Publicación pública autorizada por el propietario; el panel requiere sesión.
+- Publicación pública autorizada por el propietario en GitHub Pages.
+- La carpeta `docs` contiene exclusivamente la web para clientes.
+- El panel no forma parte de esta publicación.
+- La activación de Pages requiere acceso a la configuración del repositorio.
 - Facebook: https://www.facebook.com/share/1C4UkSgPaq/
 - TikTok: https://www.tiktok.com/@sinteria.producci
 - Material recibido: 9 fotos reales y 10 videos completos publicados;
@@ -23,7 +24,7 @@ con detalles de carnaval y una composición adaptada a celular y PC.
   optimizaron a MP4 H.264/AAC para la web sin recortarlos.
 - La portada inicial es un concepto ilustrativo, identificado en la web.
 - Tarifas recuperadas del trabajo previo: S/180, S/280 y S/380 para uno, dos
-  y tres personajes; editables desde el panel.
+  y tres personajes. La edición desde un panel se retomará después.
 - El adelanto separa la fecha. Cancelación del cliente con más de 72 horas:
   devolución del adelanto. Con 72 horas o menos: adelanto no reembolsable.
   La regla no limita los derechos del consumidor ni las devoluciones por
@@ -31,14 +32,11 @@ con detalles de carnaval y una composición adaptada a celular y PC.
 
 ## Código y alojamiento
 
-Este repositorio contiene el código de la versión publicada. La web y el panel
-están alojados en Sites; guardar el código en GitHub no cambia ese alojamiento.
-GitHub Pages sirve páginas estáticas y no ejecuta este panel con autenticación,
-D1 y R2. No se ha activado un dominio o alojamiento de pago.
-
-Las fotos y videos cargados desde el panel se guardan en R2 y su contenido
-editable en D1. No son archivos dentro de este repositorio. Copiar solo el
-código no copia esos datos ni las credenciales de acceso.
+La versión pública se publica desde `main`, carpeta `/docs`. El contenido y
+los archivos multimedia se sirven desde el mismo alojamiento estático;
+no necesita ChatGPT, una cuenta de visitante, una API o un panel para abrirse.
+El código del servidor y del panel anterior se conserva para la siguiente etapa;
+no se ejecuta al publicar `docs`. No se han contratado servicios de pago.
 
 Para que la transferencia no dependa de subir un archivo grande de una vez,
 el logo y la imagen de portada originales están conservados sin pérdida en
@@ -59,33 +57,36 @@ Para compilar: `pnpm build`. Para ejecutar fuera de Sites, hay que configurar
 los recursos D1/R2 y los secretos de ejecución por separado. La contraseña,
 su hash y las sesiones no se incluyen en el repositorio.
 
-## Página pública estática y panel
+## Página pública estática
 
-La versión pública estática se genera en `docs` con `pnpm build:public`.
-Conserva el diseño y consulta el catálogo público actualizado en Sites.
-Las fotos y los videos publicados se sirven desde el almacenamiento existente.
-El enlace Administración abre el panel privado de Sites, que guarda los
-precios, catálogos y archivos para todos los dispositivos.
+`pnpm build:public` genera `docs` a partir de `public-page/snapshot.json`.
+Conserva los archivos de `docs/media` durante las compilaciones. La página
+no consulta el servidor anterior y no muestra un enlace de Administración.
 
-`docs` puede subirse a un alojamiento estático que permita sitios comerciales,
-por ejemplo Cloudflare Pages. El código sigue siendo del repositorio de
-`sinteriaproducciones`. No se debe activar GitHub Pages para este sitio de
-catálogo, precios y reservas: sus reglas prohíben usarlo como alojamiento
-gratuito de sitios destinados principalmente a facilitar operaciones comerciales.
-Fuente: https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits
+Las 9 fotos mantienen sus bytes JPEG originales. Los 10 videos están en
+MP4 H.264/AAC a 720 píxeles de ancho y conservan su duración completa.
+Los carteles de video se cargan antes de reproducir, sin descargar todos
+los videos cuando se abre la página.
 
-Tras obtener el dominio del nuevo alojamiento, configurar
-`PUBLIC_SITE_ORIGIN` en los valores de ejecución de Sites, con el origen
-HTTPS exacto, sin rutas. La lectura de `/api/site` solo permite ese origen
-y no comparte cookies. El acceso y las escrituras del panel siguen siendo
-del mismo origen que Sites. Los borradores siguen ocultos y sus archivos
-no se sirven a visitantes.
+Preparar el material original extraído de los ZIP, con FFmpeg instalado:
 
-Para generar metadatos con el enlace nuevo: ejecutar `pnpm build:public`
-con `PUBLIC_SITE_URL` igual al enlace público completo. Si se omite, la
-versión estática conserva como dirección canónica la web actual de Sites.
-No se han contratado servicios de pago ni ampliaciones de almacenamiento.
-D1, R2 y la autenticación permanecen en Sites; sus límites siguen aplicándose.
+```sh
+python scripts/prepare-public-media.py /ruta/a/los/archivos/originales
+pnpm build:public
+```
+
+El enlace canónico previsto es
+`https://sinteriaproducciones.github.io/sinteria-producciones./`.
+Ese enlace no debe anunciarse como publicado hasta que Pages indique
+una publicación completada y la página responda correctamente.
+`PUBLIC_SITE_URL` permite cambiar el enlace canónico al compilar.
+
+Para activar: Settings → Pages → Deploy from a branch → `main` → `/docs` → Save.
+GitHub publica los cambios posteriores en esa carpeta. Las condiciones de uso
+de Pages incluyen restricciones al alojamiento gratuito comercial:
+https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits
+
+## Servidor y panel conservados para la siguiente etapa
 
 ## Operación
 
