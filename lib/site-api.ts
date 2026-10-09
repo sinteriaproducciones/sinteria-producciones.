@@ -2,7 +2,7 @@ import { defaultContent, referencedMedia, validateContent, type SiteContent } fr
 import { SITE_LIMITS } from "./limits.ts";
 import { videoDuration } from "./video-duration.ts";
 
-export type SiteEnv = { DB?: D1Database; BUCKET?: R2Bucket; ADMIN_EMAIL?: string; ADMIN_PASSWORD_HASH?: string };
+export type SiteEnv = { DB?: D1Database; BUCKET?: R2Bucket; ADMIN_EMAIL?: string; ADMIN_PASSWORD_HASH?: string; PUBLIC_SITE_ORIGIN?: string };
 const COOKIE = "sinteria_session";
 const MAX_IMAGE = SITE_LIMITS.imageBytes;
 const MAX_VIDEO = SITE_LIMITS.videoBytes;
@@ -78,7 +78,10 @@ export async function handleSiteAPI(request: Request, env: SiteEnv): Promise<Res
   try {
     if (request.method === "GET" && url.pathname === "/api/site") {
       const state = await readContent(db);
-      return json({ content: published(state.content), revision: state.revision });
+      const publicOrigin = env.PUBLIC_SITE_ORIGIN;
+      const headers: Record<string, string> = { "Vary": "Origin" };
+      if (publicOrigin && request.headers.get("origin") === publicOrigin) headers["Access-Control-Allow-Origin"] = publicOrigin;
+      return json({ content: published(state.content), revision: state.revision }, 200, headers);
     }
     if (["GET", "HEAD"].includes(request.method) && url.pathname.startsWith("/media/")) {
       const id = url.pathname.slice(7);

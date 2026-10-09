@@ -59,6 +59,34 @@ Para compilar: `pnpm build`. Para ejecutar fuera de Sites, hay que configurar
 los recursos D1/R2 y los secretos de ejecución por separado. La contraseña,
 su hash y las sesiones no se incluyen en el repositorio.
 
+## Página pública estática y panel
+
+La versión pública estática se genera en `docs` con `pnpm build:public`.
+Conserva el diseño y consulta el catálogo público actualizado en Sites.
+Las fotos y los videos publicados se sirven desde el almacenamiento existente.
+El enlace Administración abre el panel privado de Sites, que guarda los
+precios, catálogos y archivos para todos los dispositivos.
+
+`docs` puede subirse a un alojamiento estático que permita sitios comerciales,
+por ejemplo Cloudflare Pages. El código sigue siendo del repositorio de
+`sinteriaproducciones`. No se debe activar GitHub Pages para este sitio de
+catálogo, precios y reservas: sus reglas prohíben usarlo como alojamiento
+gratuito de sitios destinados principalmente a facilitar operaciones comerciales.
+Fuente: https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits
+
+Tras obtener el dominio del nuevo alojamiento, configurar
+`PUBLIC_SITE_ORIGIN` en los valores de ejecución de Sites, con el origen
+HTTPS exacto, sin rutas. La lectura de `/api/site` solo permite ese origen
+y no comparte cookies. El acceso y las escrituras del panel siguen siendo
+del mismo origen que Sites. Los borradores siguen ocultos y sus archivos
+no se sirven a visitantes.
+
+Para generar metadatos con el enlace nuevo: ejecutar `pnpm build:public`
+con `PUBLIC_SITE_URL` igual al enlace público completo. Si se omite, la
+versión estática conserva como dirección canónica la web actual de Sites.
+No se han contratado servicios de pago ni ampliaciones de almacenamiento.
+D1, R2 y la autenticación permanecen en Sites; sus límites siguen aplicándose.
+
 ## Operación
 
 `/` muestra la web. `/admin` muestra el acceso y el panel. Los cambios se

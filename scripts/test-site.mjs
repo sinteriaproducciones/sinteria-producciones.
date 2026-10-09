@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { handleSiteAPI } from '../lib/site-api.ts';
 import { defaultContent, validateContent, youtubeEmbed, whatsappLink } from '../lib/content.ts';
 import { SITE_LIMITS } from '../lib/limits.ts';
+import { publicContentWithOrigin } from '../lib/public-content.ts';
 
 const require = createRequire(new URL('../node_modules/.pnpm/node_modules/miniflare/package.json', import.meta.url));
 const { Miniflare } = require('miniflare');
@@ -18,7 +19,7 @@ try {
     for (const statement of sql.split('--> statement-breakpoint')) await DB.prepare(statement.trim()).run();
   }
   const salt = randomBytes(16).toString('hex');
-  const env = { DB, BUCKET, ADMIN_EMAIL: 'admin@example.test', ADMIN_PASSWORD_HASH: `pbkdf2$100000$${salt}$${pbkdf2Sync('test-only-password', salt, 100000, 32, 'sha256').toString('hex')}` };
+  const env = { DB, BUCKET, ADMIN_EMAIL: 'admin@example.test', PUBLIC_SITE_ORIGIN: 'https://public.sinteria.test', ADMIN_PASSWORD_HASH: `pbkdf2$100000$${salt}$${pbkdf2Sync('test-only-password', salt, 100000, 32, 'sha256').toString('hex')}` };
   const origin = 'https://sinteria.test';
   async function call(path, {method = 'GET', data, cookie, originHeader = origin, body, headers = {}, environment = env} = {}) {
     const reqHeaders = { ...headers, ...(method !== 'GET' && method !== 'HEAD' ? { Origin: originHeader } : {}), ...(cookie ? {Cookie: cookie} : {}), ...(data ? {'Content-Type': 'application/json'} : {}) };
@@ -27,6 +28,13 @@ try {
   let result = await call('/api/site');
   check(result.status === 200, 'Public catalog is available without admin login');
   check((await result.json()).content.brand.whatsapp === '51952391268', 'Correct business WhatsApp');
+  result = await call('/api/site', {headers:{Origin:'https://public.sinteria.test'}});
+  check(result.headers.get('access-control-allow-origin') === 'https://public.sinteria.test', 'the public frontend can read the public catalog');
+  check(!result.headers.has('access-control-allow-credentials'), 'Public catalog does not share credentials');
+  check(!(await call('/api/site', {headers:{Origin:'https://attacker.test'}})).headers.has('access-control-allow-origin'), 'Other origins do not gain catalog CORS access');
+  check(!(await call('/api/admin/content', {headers:{Origin:'https://public.sinteria.test'}})).headers.has('access-control-allow-origin'), 'Admin data is not exposed to the public frontend');
+  const remoteContent = publicContentWithOrigin(defaultContent, 'https://sinteria-producciones.genrrytm16.chatgpt.site');
+  check(remoteContent.brand.hero === 'https://sinteria-producciones.genrrytm16.chatgpt.site/assets/fiesta-hero.png' && defaultContent.brand.hero === '/assets/fiesta-hero.png', 'Public asset origin is resolved without mutating content');
   check((await call('/api/admin/content')).status === 401, 'Anonymous admin read rejected');
   check((await call('/api/admin/content', {method: 'PUT', data: {content: defaultContent, revision: 0}})).status === 401, 'Anonymous write rejected');
   check((await call('/api/admin/login', {method:'POST', data:{email:env.ADMIN_EMAIL,password:'test-only-password'},originHeader:'https://attacker.test'})).status === 403, 'Cross-origin login rejected');
@@ -36,6 +44,7 @@ try {
   const setCookie = result.headers.get('set-cookie');
   check(setCookie.includes('HttpOnly') && setCookie.includes('Secure') && setCookie.includes('SameSite=Lax'), 'Secure server session cookie');
   const cookie = setCookie.split(';')[0];
+  check((await call('/api/admin/content', {method:'PUT',cookie,data:{content:defaultContent,revision:0},originHeader:'https://public.sinteria.test'})).status === 403, 'Authenticated admin writes from the public frontend are still rejected');
   check((await call('/api/admin/content', {cookie})).status === 200, 'Authenticated admin reads content');
   const session = await DB.prepare('SELECT token_hash FROM admin_sessions').first();
   check(session.token_hash !== cookie.split('=')[1], 'Only a hash of the session is stored');
