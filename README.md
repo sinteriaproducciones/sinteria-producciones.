@@ -8,10 +8,13 @@ Perteneciente a Sinteria Group.
 
 ## Estado de esta actualización
 
-Panel implementado y compilado. Pendiente conectar Supabase, crear un proyecto
+Avance guardado y trabajo pausado por solicitud del propietario el 14 de octubre
+de 2026, hasta que tenga su cuenta de Supabase para Sinteria Producciones.
+Panel implementado, compilado y probado localmente. Pendiente activar un proyecto
 Free, aplicar la migración y validar el acceso real del administrador. Esta rama
 no debe fusionarse con main hasta completar esas comprobaciones. La web de
-clientes sigue publicada con la versión actual.
+clientes sigue publicada con la versión actual. Las instrucciones para retomar
+están en [PANEL_RETOMAR.md](PANEL_RETOMAR.md).
 
 ## Funciones
 
