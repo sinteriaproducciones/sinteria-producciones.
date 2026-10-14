@@ -1,0 +1,20 @@
+import { build } from "vite";
+import react from "@vitejs/plugin-react";
+import { readFile, writeFile, mkdir, cp } from "node:fs/promises";
+import { resolve } from "node:path";
+import { pathToFileURL, fileURLToPath } from "node:url";
+const root=resolve(fileURLToPath(new URL("../",import.meta.url)));
+const content=JSON.parse(await readFile(resolve(root,"public-page/snapshot.json"),"utf8"));
+const ssr=resolve(root,".panel-runtime/ssr"),out=resolve(root,"docs");
+await build({configFile:false,root,publicDir:false,plugins:[react()],build:{ssr:resolve(root,"public-page/server.tsx"),outDir:ssr,emptyOutDir:true,rolldownOptions:{output:{entryFileNames:"render.mjs"}}}});
+const {renderPublicPage}=await import(pathToFileURL(resolve(ssr,"render.mjs")));
+await build({configFile:false,root:resolve(root,"public-page"),base:"./",publicDir:false,plugins:[react()],build:{outDir:out,emptyOutDir:true,target:"es2022",assetsInlineLimit:0}});
+const publicURL="https://sinteriaproducciones.github.io/sinteria-producciones./";
+const template=await readFile(resolve(out,"index.html"),"utf8");
+await writeFile(resolve(out,"index.html"),template.replace("<!--PUBLIC_PAGE-->",renderPublicPage(content)).replace("<!--PUBLIC_STATE-->",JSON.stringify(content).replaceAll("<","\\u003c")).replaceAll("__PUBLIC_URL__",publicURL));
+await writeFile(resolve(out,".nojekyll"),"");
+await cp(resolve(root,"public/favicon.svg"),resolve(out,"favicon.svg"));
+await cp(resolve(root,"public-page/backend-config.json"),resolve(out,"backend-config.json"));
+await build({configFile:false,root:resolve(root,"admin-page"),base:"./",publicDir:false,plugins:[react()],build:{outDir:resolve(out,"admin"),emptyOutDir:true,target:"es2022",assetsInlineLimit:0}});
+console.log("Panel y web pública compilados; los archivos de galería existentes se conservan en GitHub.");
+

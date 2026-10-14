@@ -9,4 +9,5 @@ const saved = document.getElementById("public-state")?.textContent;
 const root = document.getElementById("root");
 if (!saved || !root) throw new Error("The public page was not built correctly.");
 const content: SiteContent = JSON.parse(saved);
-createRoot(root).render(<PublicSite initialContent={content} adminHref={null} liveUpdates={false} logoSrc="./assets/sinteria-logo.png" />);
+createRoot(root).render(<PublicSite initialContent={content} adminHref="./admin/" liveUpdates={true} logoSrc="./assets/sinteria-logo.png" />);
+

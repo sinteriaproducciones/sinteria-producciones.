@@ -14,6 +14,7 @@ export default function StorageGuide({ used, files, catalogs, gallery }: { used:
       <li>Los borradores, fotos de catálogo, portadas y vistas previas de video también ocupan espacio.</li>
       <li>Para liberar espacio, retira la foto o el video de donde se usa, guarda los cambios y elimínalo desde Archivos. Ocultarlo o quitarlo de la galería no elimina el archivo.</li>
       <li>En Catálogos y precios puedes crear un personaje, un combo o un show, con nombre, foto y precio propio. El número de personajes no fija el precio automáticamente.</li>
-    </ol><p className="storage-platform-note">Estos son límites preventivos de esta web. El alojamiento está sujeto a los límites del plan de ChatGPT, compartidos con tus otros Sites. Este panel no contrata planes ni aumenta el cupo automáticamente.</p></details>
+    </ol><p className="storage-platform-note">La escala de 250 MB es preventiva: las subidas se bloquean a 225 MB. El guardado usa Supabase Free, con sus propios límites de transferencia. El panel no activa planes de pago ni amplía cupos. El servicio gratuito puede pausarse después de una semana sin actividad; se reactiva desde tu cuenta de Supabase. Los archivos originales de GitHub se conservan como respaldo.</p></details>
   </section>;
 }
+

@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "../app/admin/**/*.tsx",
+    "../app/admin/video-preview.ts",
+    "../app/public-site.tsx",
+    "../lib/content.ts",
+    "../lib/limits.ts",
+    "../lib/public-content.ts",
+    "../lib/admin-api-client.ts",
+    "../admin-page/**/*.tsx",
+    "../public-page/**/*.tsx",
+    "../supabase/functions/**/*.ts"
+  ]
+}
