@@ -1,3 +1,4 @@
+import { readPublicContent } from "../lib/admin-api-client.ts";
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowUpRight, ArrowRight, Check, ChevronDown, X, Menu, MessageCircle, Sparkles, PartyPopper, Mic2, Music2, Users, Stars, CalendarDays, ShieldCheck, FileCheck2, Play, MapPin, Mail, Plus, Minus } from "lucide-react";
@@ -35,7 +36,7 @@ function LegalContent({ type, content, hasAdmin = true }: { type: "terms" | "pri
       <h3>Qué datos se utilizan</h3><p>El formulario de cotización prepara un mensaje con tu nombre, tipo de evento, fecha, hora, distrito y servicio. El mensaje se muestra en WhatsApp para que tú lo revises y decidas enviarlo. No se crea una reserva ni se guarda ese formulario en una base de datos de consultas de esta página.</p>
       <h3>Para qué se usan</h3><p>Los datos que envíes por WhatsApp o correo se utilizan para responder, cotizar y coordinar tu evento, atender solicitudes y cumplir obligaciones que correspondan. No se utilizarán para campañas publicitarias sin la autorización aplicable.</p>
       <h3>Plataformas y contenido externo</h3><p>La web utiliza servicios de alojamiento para operar. WhatsApp y las redes sociales enlazadas aplican sus propias políticas. Los videos de YouTube solo se cargan si eliges reproducirlos. El proveedor de alojamiento puede tratar registros técnicos de funcionamiento y seguridad conforme a sus políticas.</p>
-      <h3>Cookies y seguridad</h3><p>{hasAdmin && "El panel administrativo utiliza una cookie de sesión para mantener el acceso del administrador. "}La web no incorpora herramientas propias de publicidad ni seguimiento de visitantes. Las preferencias de visualización pueden mantenerse mientras usas la página.</p>
+      <h3>Sesión y seguridad</h3><p>{hasAdmin && "El panel guarda la sesión de acceso en el navegador mientras usas esa pestaña. La contraseña se valida mediante el servicio de autenticación y no se publica en la web. "}La web no incorpora herramientas propias de publicidad ni seguimiento de visitantes. Las preferencias de visualización pueden mantenerse mientras usas la página.</p>
       <h3>Solicitudes sobre tus datos</h3><p>Puedes solicitar información, acceso, rectificación, cancelación u oposición, según corresponda, escribiendo a {b.email}. Solo se solicitará la información necesaria para identificar tu solicitud. Los datos de coordinación se conservan mientras sean necesarios para prestar el servicio y cumplir obligaciones aplicables.</p>
     </>}
     <p className="muted legal-date">Última actualización: 8 de octubre de 2026.</p>
@@ -77,7 +78,7 @@ export default function PublicSite({ initialContent = defaultContent, apiOrigin 
   const packages = content.packages.filter(p => catalogFilter === "Todos" || (p.format || "plan") === catalogFilter);
   useEffect(() => {
     if (!liveUpdates) return;
-    const refresh = () => fetch(publicResourceURL("/api/site", apiOrigin), { cache: "no-store", credentials: "omit" }).then(r => { if (!r.ok) throw Error(); return r.json() as Promise<{content: SiteContent}>; }).then(r => { setContent(publicContentWithOrigin(r.content, apiOrigin)); setSyncError(false); }).catch(() => setSyncError(true));
+    const refresh = () => readPublicContent().then(r => { setContent(publicContentWithOrigin(r.content, apiOrigin)); setSyncError(false); }).catch(() => setSyncError(true));
     refresh();
     const visible = () => { if (document.visibilityState === "visible") refresh(); }, timer = window.setInterval(visible, 60000);
     document.addEventListener("visibilitychange", visible);
@@ -108,3 +109,4 @@ export default function PublicSite({ initialContent = defaultContent, apiOrigin 
     <a className="floating-whatsapp" href={whatsapp} target="_blank" rel="noopener noreferrer" aria-label="Hablar por WhatsApp"><MessageCircle size={25} /><span>¡Armemos tu fiesta!</span></a>{syncError && <div className="sync-notice" role="status">No pudimos actualizar el catálogo. Puedes consultar la disponibilidad por WhatsApp.</div>}{legal && <Modal label={legal === "terms" ? "Términos y condiciones" : "Política de privacidad"} close={() => setLegal(null)}><LegalContent type={legal} content={content} hasAdmin={!!adminHref} /></Modal>}{selectedMedia && <Modal label={selectedMedia.title} close={() => setSelectedMedia(null)}><Viewer media={selectedMedia} close={() => setSelectedMedia(null)} /></Modal>}
   </>;
 }
+
