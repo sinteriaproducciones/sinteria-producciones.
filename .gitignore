@@ -48,3 +48,7 @@ next-env.d.ts
 # Restored exactly from the tracked source-assets parts.
 /public/assets/fiesta-hero.png
 /public/assets/sinteria-logo.png
+
+# Public GitHub Pages build state
+/.public-runtime/
+/public-build/node_modules/

@@ -1,0 +1,181 @@
+"use client";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ArrowUpRight, ArrowRight, Check, ChevronRight, X, Menu, MessageCircle, Sparkles, PartyPopper, Mic2, Music2, Users, CalendarDays, FileCheck2, Play, Pause, Volume2, VolumeX, MapPin, Mail, Heart, Star, Expand } from "lucide-react";
+import { limaToday, money, whatsappLink, type SiteContent, type Media, type Package } from "../lib/content.ts";
+import { LegalContent, Modal, Viewer, questions } from "./public-site.tsx";
+
+export const SITE_BASE = "/sinteria-producciones./";
+export const SITE_ORIGIN = "https://sinteriaproducciones.github.io";
+export const pages = [
+  { id: "inicio", path: "", label: "Inicio", title: "Sinteria Producciones | Horas locas en Lima sur", description: "Que tu fiesta se vuelva inolvidable. Horas locas, personajes y shows de Sinteria Producciones en Lima sur. Mira nuestros videos y cotiza por WhatsApp." },
+  { id: "servicios", path: "servicios/", label: "Servicios", title: "Servicios de hora loca y animación | Sinteria Producciones", description: "Personajes, horas locas, animación y shows para cumpleaños, matrimonios, quinceañeros y eventos de empresa en Lima sur." },
+  { id: "catalogo", path: "catalogo/", label: "Catálogos", title: "Catálogos y precios de hora loca | Sinteria Producciones", description: "Conoce los planes de Sinteria Producciones: 1 personaje S/180, 2 personajes S/280 y 3 personajes S/380. Consulta disponibilidad por WhatsApp." },
+  { id: "galeria", path: "galeria/", label: "Galería", title: "Fotos y videos de nuestros shows | Sinteria Producciones", description: "Mira fotos y videos reales de los personajes y horas locas de Sinteria Producciones. Así se vive una celebración con nosotros." },
+  { id: "nosotros", path: "nosotros/", label: "Nosotros", title: "Conoce Sinteria Producciones | Sinteria Group", description: "Conoce Sinteria Producciones, perteneciente a Sinteria Group. RUC 10742038551. Hora loca, alegría y contacto directo para tu celebración." },
+  { id: "contacto", path: "contacto/", label: "Contacto", title: "Cotiza tu evento por WhatsApp | Sinteria Producciones", description: "Cuéntanos tu fecha, distrito y personajes favoritos. Prepara tu consulta y cotiza directamente con Sinteria Producciones por WhatsApp." },
+  { id: "condiciones", path: "condiciones/", label: "Condiciones", title: "Condiciones de reserva | Sinteria Producciones", description: "Condiciones de cotización, adelantos, cancelación, reprogramación y atención de Sinteria Producciones." },
+  { id: "privacidad", path: "privacidad/", label: "Privacidad", title: "Política de privacidad | Sinteria Producciones", description: "Cómo se utilizan los datos de las consultas de Sinteria Producciones y cómo solicitar atención sobre tu información." },
+] as const;
+export type PageId = typeof pages[number]["id"];
+export const pageHref = (page: PageId) => SITE_BASE + pages.find(p => p.id === page)!.path;
+export const mediaHref = (path: string) => /^https:\/\//.test(path) ? path : path.startsWith(SITE_BASE) ? path : SITE_BASE + path.replace(/^\.?\//, "");
+const videoURL = mediaHref("media/portada-124865.mp4");
+const posterURL = mediaHref("media/portada-124865.webp");
+const coverMedia: Media = { id: "portada-124865", title: "Así se vive una hora loca con Sinteria", category: "Horas locas", kind: "video", url: videoURL, poster: posterURL, published: true };
+const serviceList = [
+  { icon: PartyPopper, name: "Hora loca", text: "Ese momento en que la celebración se enciende y todos se suman a la fiesta.", detail: "Personajes, baile e interacción para compartir con tus invitados.", color: "pink" },
+  { icon: Star, name: "Personajes", text: "Tus favoritos llegan a la pista para llenar tu evento de risas y buenos momentos.", detail: "Consulta los personajes disponibles para tu fecha y arma tu combinación.", color: "purple" },
+  { icon: Mic2, name: "Animación", text: "Conectamos con tus invitados y le damos ritmo a cada momento de tu celebración.", detail: "Coordinamos contigo la dinámica, el espacio y los detalles de tu evento.", color: "yellow" },
+  { icon: Music2, name: "Shows y baile", text: "Música, movimiento y la energía que hace que nadie quiera quedarse sentado.", detail: "El alcance, la duración y los elementos incluidos se acuerdan antes de reservar.", color: "teal" },
+];
+
+function Header({ page, whatsapp }: { page: PageId; whatsapp: string }) {
+  const [open, setOpen] = useState(false);
+  const toggle = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape" && open) { setOpen(false); toggle.current?.focus(); } };
+    document.addEventListener("keydown", key);
+    return () => document.removeEventListener("keydown", key);
+  }, [open]);
+  return <><div className="sp-announcement"><span><Sparkles size={13} /> Diversión que hace la diferencia</span><span>Lima sur <span aria-hidden="true">·</span> Perteneciente a Sinteria Group</span></div>
+    <header className="sp-header"><div className="sp-container sp-nav-wrap"><a className="sp-logo" href={pageHref("inicio")} aria-label="Sinteria Producciones, inicio"><img src={mediaHref("assets/sinteria-logo.png")} alt="Sinteria Producciones" width="186" height="66" /></a>
+      <nav className={open ? "sp-nav is-open" : "sp-nav"} id="navegacion" aria-label="Navegación principal">{pages.filter(p => ["inicio", "servicios", "catalogo", "galeria", "contacto"].includes(p.id)).map(p => <a key={p.id} href={pageHref(p.id)} aria-current={page === p.id ? "page" : undefined}>{p.label}</a>)}</nav>
+      <a className="sp-button sp-whatsapp sp-nav-cta" href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle size={18} /> Cotizar mi evento <ArrowUpRight size={16} /></a>
+      <button className="sp-menu-button" ref={toggle} aria-label={open ? "Cerrar menú" : "Abrir menú"} aria-expanded={open} aria-controls="navegacion" onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button>
+    </div></header></>;
+}
+
+function HeroVideo() {
+  const ref = useRef<HTMLVideoElement>(null), manuallyPaused = useRef(false);
+  const [paused, setPaused] = useState(false), [muted, setMuted] = useState(true), [failed, setFailed] = useState(false);
+  useEffect(() => {
+    const video = ref.current;
+    if (!video) return;
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let inView = true;
+    const update = () => {
+      if (motion.matches || document.visibilityState !== "visible" || !inView || manuallyPaused.current) video.pause();
+      else video.play().catch(() => setPaused(true));
+    };
+    const observer = new IntersectionObserver(entries => { inView = entries[0].isIntersecting; update(); }, { threshold: 0.15 });
+    observer.observe(video);
+    document.addEventListener("visibilitychange", update);
+    motion.addEventListener("change", update);
+    update();
+    return () => { observer.disconnect(); document.removeEventListener("visibilitychange", update); motion.removeEventListener("change", update); };
+  }, []);
+  function playPause() {
+    const video = ref.current;
+    if (!video) return;
+    if (video.paused) { manuallyPaused.current = false; video.play().catch(() => setPaused(true)); }
+    else { manuallyPaused.current = true; video.pause(); }
+  }
+  function sound() {
+    const video = ref.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    setMuted(video.muted);
+    if (video.paused) { manuallyPaused.current = false; video.play().catch(() => setPaused(true)); }
+  }
+  function fullscreen() {
+    const video = ref.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+    if (video?.requestFullscreen) video.requestFullscreen().catch(() => undefined);
+    else video?.webkitEnterFullscreen?.();
+  }
+  return <div className="sp-hero-stage"><span className="sp-stage-orbit" aria-hidden="true" /><div className="sp-stage-label"><span className="sp-live-dot" /> ASÍ SE VIVE SINTERIA</div>
+    <div className="sp-video-card"><div className="sp-video-screen"><video ref={ref} src={videoURL} poster={posterURL} autoPlay loop muted playsInline preload="metadata" aria-label="Hora loca de Sinteria Producciones. Video de portada." onPlay={() => setPaused(false)} onPause={() => setPaused(true)} onVolumeChange={e => setMuted(e.currentTarget.muted)} onError={() => setFailed(true)} />
+      {failed && <div className="sp-video-error"><p>No pudimos cargar este video.</p><a href={pageHref("galeria")}>Ver nuestra galería <ArrowRight size={17} /></a></div>}
+      {paused && !failed && <button className="sp-play-overlay" onClick={playPause} aria-label="Reproducir el video de portada"><Play size={30} fill="currentColor" /></button>}
+    </div><div className="sp-video-controls"><button onClick={playPause} aria-label={paused ? "Reproducir video" : "Pausar video"}>{paused ? <Play size={18} /> : <Pause size={18} />}</button><button className="sp-sound-control" onClick={sound} aria-label={muted ? "Activar sonido" : "Silenciar video"}>{muted ? <VolumeX size={18} /> : <Volume2 size={18} />}<span>{muted ? "Activar sonido" : "Sonido activado"}</span></button><button onClick={fullscreen} aria-label="Ver video en pantalla completa"><Expand size={18} /></button></div></div>
+    <div className="sp-party-sticker"><PartyPopper size={24} /><span>¡La fiesta<br /><strong>la ponemos juntos!</strong></span></div><span className="sp-stage-sparkle" aria-hidden="true">✦</span>
+  </div>;
+}
+
+function PageIntro({ page, eyebrow, title, accent, text }: { page: PageId; eyebrow: string; title: string; accent?: string; text: string }) {
+  return <section className="sp-page-intro"><div className="sp-container"><nav className="sp-breadcrumb" aria-label="Ruta de navegación"><a href={pageHref("inicio")}>Inicio</a><ChevronRight size={14} /><span aria-current="page">{pages.find(p => p.id === page)?.label}</span></nav><p className="sp-eyebrow">{eyebrow}</p><h1>{title} {accent && <span>{accent}</span>}</h1><p className="sp-intro-text">{text}</p></div><span className="sp-intro-star" aria-hidden="true">✦</span></section>;
+}
+
+function SectionHeading({ eyebrow, title, text, href, label }: { eyebrow: string; title: string; text?: string; href?: string; label?: string }) {
+  return <div className="sp-section-heading"><div><p className="sp-eyebrow">{eyebrow}</p><h2>{title}</h2>{text && <p>{text}</p>}</div>{href && <a className="sp-text-link" href={href}>{label} <ArrowUpRight size={20} /></a>}</div>;
+}
+
+function CatalogCards({ content }: { content: SiteContent }) {
+  const [filter, setFilter] = useState("Todos");
+  const types = [{ id: "Todos", text: "Todos" }, { id: "plan", text: "Planes" }, { id: "personaje", text: "Personajes" }, { id: "combo", text: "Combos" }, { id: "show", text: "Shows" }].filter(t => t.id === "Todos" || content.packages.some(p => (p.format || "plan") === t.id));
+  const items = content.packages.filter(p => p.published && (filter === "Todos" || (p.format || "plan") === filter));
+  return <>{types.length > 2 && <div className="sp-filters" aria-label="Filtrar catálogos">{types.map(t => <button key={t.id} className={filter === t.id ? "is-active" : ""} aria-pressed={filter === t.id} onClick={() => setFilter(t.id)}>{t.text}</button>)}</div>}
+    <div className="sp-catalog-grid">{items.map((p, i) => <article className={p.featured ? "sp-plan is-featured" : "sp-plan"} key={p.id}><a className="sp-plan-photo" href={pageHref("contacto") + "?plan=" + encodeURIComponent(p.id)} aria-label={`Consultar ${p.name}`}><img src={mediaHref(p.image || content.brand.hero)} alt={`${p.name}: ${p.subtitle}`} loading="lazy" width="520" height="390" />{p.featured && <span className="sp-plan-badge"><Sparkles size={13} /> A DÚO SE DISFRUTA MÁS</span>}<span className="sp-plan-index">0{i + 1}</span></a><div className="sp-plan-body"><span className="sp-plan-type">{p.subtitle}</span><h3>{p.name}</h3><p className="sp-plan-description">{p.description}</p><p className="sp-price">{p.price === null ? <strong>Conversemos</strong> : <><strong>{money(p.price)}</strong><span>precio de referencia</span></>}</p><ul>{p.includes.map(t => <li key={t}><Check size={16} />{t}</li>)}</ul><a className={p.featured ? "sp-button sp-primary" : "sp-button sp-outline"} href={pageHref("contacto") + "?plan=" + encodeURIComponent(p.id)}>Consultar este plan <ArrowUpRight size={17} /></a></div></article>)}</div>
+    <p className="sp-price-note">Precios en soles. La disponibilidad, duración, movilidad y cualquier adicional se confirman en tu cotización antes de separar.</p></>;
+}
+
+function Gallery({ content, preview = false }: { content: SiteContent; preview?: boolean }) {
+  const [filter, setFilter] = useState("Todos"), [selected, setSelected] = useState<Media | null>(null), [count, setCount] = useState(9);
+  const all = [coverMedia, ...content.gallery.filter(m => m.published)];
+  const visible = preview ? [coverMedia, ...all.filter(m => m.kind === "image").slice(3, 5)] : all.filter(m => filter === "Todos" || (filter === "Fotos" ? m.kind === "image" : m.kind !== "image"));
+  const normalized = (m: Media) => ({ ...m, url: mediaHref(m.url), poster: m.poster ? mediaHref(m.poster) : undefined });
+  return <>{!preview && <div className="sp-gallery-toolbar"><div className="sp-filters" aria-label="Filtrar galería">{["Todos", "Fotos", "Videos"].map(f => <button key={f} className={filter === f ? "is-active" : ""} aria-pressed={filter === f} onClick={() => { setFilter(f); setCount(9); }}>{f}</button>)}</div><p aria-live="polite">{visible.length} {visible.length === 1 ? "momento" : "momentos"} para compartir</p></div>}
+    <div className={preview ? "sp-gallery-grid is-preview" : "sp-gallery-grid"}>{visible.slice(0, preview ? 3 : count).map((m, i) => <button className="sp-gallery-card" key={m.id} onClick={() => setSelected(normalized(m))} aria-label={`${m.kind === "image" ? "Ampliar foto" : "Reproducir video"}: ${m.title}`}><img src={mediaHref(m.kind === "image" ? m.url : m.poster || content.brand.hero)} alt={m.title} width="480" height="640" loading="lazy" /><span className="sp-media-type">{m.kind === "image" ? "FOTO" : "VIDEO"}</span>{m.kind !== "image" && <span className="sp-gallery-play"><Play size={25} fill="currentColor" /></span>}<span className="sp-gallery-caption"><small>{i === 0 && m.id === coverMedia.id ? "NUESTRO NUEVO VIDEO" : m.category}</small><strong>{m.title}</strong><ArrowUpRight size={20} /></span></button>)}</div>
+    {!preview && count < visible.length && <div className="sp-centered"><button className="sp-button sp-outline" onClick={() => setCount(count + 9)}>Ver más momentos <ArrowRight size={18} /></button></div>}
+    {selected && <Modal label={selected.title} close={() => setSelected(null)}><Viewer media={selected} close={() => setSelected(null)} /></Modal>}</>;
+}
+
+function HowToReserve() {
+  return <section className="sp-section sp-container"><SectionHeading eyebrow="DE TU IDEA A LA PISTA" title="Tu fiesta empieza con un mensaje." text="Nos cuentas tu plan, coordinamos los detalles y hacemos que suceda." /><div className="sp-steps">{[["01", "Cuéntanos tu idea", "Fecha, hora, distrito y qué quieres celebrar. Empecemos por lo que imaginas."], ["02", "Armamos tu propuesta", "Revisamos disponibilidad, personajes, duración y precio total por escrito."], ["03", "Separa tu fecha", "El adelanto acordado separa la fecha cuando confirmamos tu reserva."]].map(([number, title, text]) => <article key={number}><span>{number}</span><div><h3>{title}</h3><p>{text}</p></div></article>)}</div></section>;
+}
+
+function CallToParty({ whatsapp }: { whatsapp: string }) {
+  return <section className="sp-container sp-cta-section"><div className="sp-cta"><div><p className="sp-eyebrow">TÚ PONES LA FECHA. NOSOTROS, LA DIVERSIÓN.</p><h2>¿Y si armamos<br />una fiesta increíble?</h2><p>Cuéntanos qué celebras. Hagamos que sea un gran recuerdo.</p></div><div className="sp-cta-actions"><a className="sp-button sp-dark" href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle size={20} /> Hablemos por WhatsApp <ArrowUpRight size={18} /></a><a className="sp-cta-secondary" href={pageHref("contacto")}>Prefiero preparar mi consulta <ArrowRight size={17} /></a></div><span aria-hidden="true" className="sp-cta-spark">✦</span></div></section>;
+}
+
+function Home({ content, whatsapp }: { content: SiteContent; whatsapp: string }) {
+  return <><section className="sp-hero"><div className="sp-container sp-hero-grid"><div className="sp-hero-copy"><p className="sp-eyebrow"><span className="sp-mini-spark">✦</span> HORA LOCA, ALEGRÍA Y MUCHA DIVERSIÓN</p><h1>{content.brand.headline}<br /><span>{content.brand.highlight}</span></h1><p className="sp-hero-description">{content.brand.description}</p><div className="sp-hero-actions"><a className="sp-button sp-primary" href={pageHref("contacto")}>Quiero mi hora loca <ArrowUpRight size={20} /></a><a className="sp-button sp-outline" href={pageHref("catalogo")}>Explorar catálogos <ArrowRight size={18} /></a></div><div className="sp-hero-note"><span><MapPin size={16} /> Lima sur</span><span><MessageCircle size={16} /> Contacto directo</span></div></div><HeroVideo /></div><span className="sp-confetti sp-confetti-one" aria-hidden="true" /><span className="sp-confetti sp-confetti-two" aria-hidden="true" /></section>
+    <div className="sp-party-ribbon" aria-label="Para cumpleaños, matrimonios, quinceañeros y eventos de empresa"><span>CUMPLEAÑOS</span><Star /><span>MATRIMONIOS</span><Star /><span>QUINCEAÑEROS</span><Star /><span>EVENTOS DE EMPRESA</span><Star /><span>¡QUE COMIENCE LA FIESTA!</span></div>
+    <section className="sp-section sp-container"><SectionHeading eyebrow="HAY MUCHAS FORMAS DE CELEBRAR" title="Tu evento, con toda la energía." href={pageHref("servicios")} label="Descubrir servicios" /><div className="sp-service-preview">{serviceList.slice(0, 3).map(({ icon: Icon, name, text, color }) => <a href={pageHref("servicios")} className={`sp-service-mini sp-${color}`} key={name}><span className="sp-service-icon"><Icon size={28} /></span><h3>{name}</h3><p>{text}</p><span className="sp-service-more">Conoce más <ArrowUpRight size={17} /></span></a>)}</div></section>
+    <section className="sp-section sp-pink-section"><div className="sp-container"><SectionHeading eyebrow="ELIGE TU PUNTO DE PARTIDA" title="Más personajes. Más momentos." text="Explora nuestros planes y encuentra la chispa de tu celebración." href={pageHref("catalogo")} label="Ver catálogos" /><CatalogCards content={content} /></div></section>
+    <section className="sp-section sp-container"><SectionHeading eyebrow="ASÍ NOS DIVERTIMOS" title="La mejor presentación: la fiesta." text="Fotos y videos de nuestras celebraciones. Dale play y siente la energía." href={pageHref("galeria")} label="Entrar a la galería" /><Gallery content={content} preview /></section>
+    <section className="sp-about-preview"><div className="sp-container sp-about-grid"><div><p className="sp-eyebrow">SOMOS SINTERIA PRODUCCIONES</p><h2>Nos tomamos en serio<br /><span>hacerte sonreír.</span></h2><p>Creemos en las celebraciones que se viven juntos. Por eso coordinamos contigo los personajes, el show y cada detalle de tu reserva.</p><a href={pageHref("nosotros")} className="sp-text-link">Conoce quiénes somos <ArrowUpRight size={18} /></a></div><div className="sp-trust-box"><div><FileCheck2 size={25} /><span><small>IDENTIFICACIÓN DEL NEGOCIO</small><strong>RUC {content.brand.ruc}</strong></span></div><div><MessageCircle size={25} /><span><small>CONVERSEMOS DIRECTAMENTE</small><strong>WhatsApp 952 391 268</strong></span></div><div><Heart size={25} /><span><small>PERTENECIENTE A</small><strong>{content.brand.group}</strong></span></div></div></div></section>
+    <HowToReserve /><CallToParty whatsapp={whatsapp} /></>;
+}
+
+function Services({ content, whatsapp }: { content: SiteContent; whatsapp: string }) {
+  return <><PageIntro page="servicios" eyebrow="TU CELEBRACIÓN TIENE SU PROPIO ESTILO" title="Nosotros ponemos" accent="la diversión." text="Personajes, animación y shows que conectan con tus invitados. Descubre cómo podemos acompañar tu gran día." />
+    <section className="sp-section sp-container"><div className="sp-services-layout"><div className="sp-service-photo"><img src={mediaHref("media/117020.jpg")} alt="Invitados y personajes compartiendo una hora loca" width="700" height="850" /><span>Risas que se convierten<br /><strong>en buenos recuerdos.</strong></span></div><div className="sp-services-grid">{serviceList.map(({ icon: Icon, name, text, detail, color }) => <article className={`sp-service-detail sp-${color}`} key={name}><span className="sp-service-icon"><Icon size={28} /></span><h2>{name}</h2><p>{text}</p><p className="sp-service-detail-note">{detail}</p><a className="sp-text-link" href={pageHref("contacto")}>Consultar servicio <ArrowUpRight size={17} /></a></article>)}</div></div></section>
+    <section className="sp-section sp-lilac-section"><div className="sp-container"><SectionHeading eyebrow="PARA ESOS DÍAS QUE IMPORTAN" title="Hay motivos de sobra para celebrar." /><div className="sp-occasions">{["Cumpleaños", "Matrimonios", "Quinceañeros", "Eventos de empresa"].map((t, i) => <div key={t}><span>0{i + 1}</span><h3>{t}</h3><PartyPopper size={22} /></div>)}</div><div className="sp-info-line"><MapPin size={20} /><p>Atendemos en <strong>Lima sur</strong>. Coordinamos contigo el lugar, accesos y condiciones del evento.</p></div></div></section><HowToReserve /><CallToParty whatsapp={whatsapp} /></>;
+}
+
+function Catalog({ content, whatsapp }: { content: SiteContent; whatsapp: string }) {
+  return <><PageIntro page="catalogo" eyebrow="EL PRIMER PASO HACIA UNA GRAN FIESTA" title="Encuentra tu" accent="plan favorito." text="Empieza por estos planes y cuéntanos qué personajes te gustaría tener. Coordinamos contigo la disponibilidad y los detalles." /><section className="sp-section sp-container"><CatalogCards content={content} /><div className="sp-custom-plan"><Sparkles size={32} /><div><h2>¿Tienes otra combinación en mente?</h2><p>Escríbenos para consultar personajes, combos y una propuesta para tu evento.</p></div><a className="sp-button sp-outline" href={pageHref("contacto")}>Armar mi propuesta <ArrowUpRight size={18} /></a></div></section><CallToParty whatsapp={whatsapp} /></>;
+}
+
+function About({ content, whatsapp }: { content: SiteContent; whatsapp: string }) {
+  return <><PageIntro page="nosotros" eyebrow="ALEGRÍA CON NOMBRE PROPIO" title="Mucho gusto." accent="Somos Sinteria." text="Somos Sinteria Producciones, perteneciente a Sinteria Group. Nos encanta acompañar esos momentos en que todos tienen un buen motivo para celebrar." /><section className="sp-section sp-container sp-story-grid"><div className="sp-story-photo"><img src={mediaHref("media/117024.jpg")} alt="Personajes de Sinteria Producciones listos para la celebración" width="800" height="900" /><span className="sp-photo-sticker">Diversión que hace<br /><strong>la diferencia.</strong></span></div><div className="sp-story-copy"><p className="sp-eyebrow">PERSONAJES, RITMO Y BUENOS MOMENTOS</p><h2>Queremos ser parte<br />de tu próxima historia.</h2><p>Una hora loca se disfruta cuando los personajes y los invitados se encuentran en la pista. Nos gusta crear ese momento con energía, baile y cercanía.</p><p>Antes del evento, conversamos contigo para elegir el servicio, comprobar la disponibilidad y dejar por escrito lo que incluye tu propuesta.</p><div className="sp-story-values">{[[CalendarDays, "Coordinación contigo", "Tu fecha y el alcance se confirman por escrito."], [MessageCircle, "Contacto directo", "Nos encuentras en nuestro WhatsApp oficial."], [FileCheck2, "Información visible", `RUC ${content.brand.ruc} · ${content.brand.group}`]].map(([Icon, title, text]) => { const I = Icon as typeof CalendarDays; return <div key={String(title)}><I size={24} /><span><strong>{String(title)}</strong><p>{String(text)}</p></span></div>; })}</div><a className="sp-button sp-primary" href={pageHref("contacto")}>Cuéntanos qué celebras <ArrowUpRight size={18} /></a></div></section><CallToParty whatsapp={whatsapp} /></>;
+}
+
+function Contact({ content, whatsapp }: { content: SiteContent; whatsapp: string }) {
+  const [selectedPackage, setSelectedPackage] = useState(""), [quoteHref, setQuoteHref] = useState(""), [error, setError] = useState("");
+  const [minimumDate, setMinimumDate] = useState("");
+  useEffect(() => { setMinimumDate(limaToday()); const plan = new URLSearchParams(window.location.search).get("plan"); if (plan && content.packages.some(p => p.id === plan)) setSelectedPackage(plan); }, [content]);
+  function prepare(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setError(""); setQuoteHref("");
+    const data = new FormData(event.currentTarget), date = String(data.get("date") || ""), time = String(data.get("time") || "");
+    const start = Date.parse(`${date}T${time}:00-05:00`);
+    if (!Number.isFinite(start) || start <= Date.now()) { setError("Elige una fecha y hora futuras para tu evento."); return; }
+    const p = content.packages.find(p => p.id === selectedPackage);
+    const name = String(data.get("name") || "").trim(), district = String(data.get("district") || "").trim();
+    if (!name || !district) { setError("Completa tu nombre y el distrito de tu evento."); return; }
+    const message = `¡Hola, Sinteria Producciones! Quisiera una cotización.\n\nMi nombre: ${name}\nEvento: ${data.get("event")}\nFecha: ${date.split("-").reverse().join("/")}\nHora de inicio: ${time} (hora de Lima)\nDistrito / lugar: ${district}\nServicio: ${p ? `${p.name} (${p.subtitle})${p.price !== null ? ` · referencia ${money(p.price)}` : ""}` : "Quiero una propuesta personalizada"}\nInvitados aproximados: ${data.get("guests") || "Por confirmar"}\nComentarios: ${String(data.get("message") || "").trim() || "Sin comentarios adicionales"}\n\nHe leído las condiciones de reserva y cancelación. Quiero consultar disponibilidad y el precio total antes de separar.`;
+    setQuoteHref(whatsappLink(content.brand.whatsapp, message));
+  }
+  return <><PageIntro page="contacto" eyebrow="TU FIESTA ESTÁ A UN MENSAJE" title="Cuéntanos tu idea." accent="Nosotros nos sumamos." text="Completa los datos y prepara tu consulta, o escríbenos directamente. Te ayudamos a elegir el show para tu celebración." /><section className="sp-section sp-container sp-contact-grid"><div className="sp-contact-info"><span className="sp-contact-icon"><MessageCircle size={32} /></span><h2>Hablemos de<br />tu gran día.</h2><p>Te atenderemos por WhatsApp para revisar tu fecha, los personajes y todos los detalles.</p><a className="sp-contact-direct" href={whatsapp} target="_blank" rel="noopener noreferrer"><span><small>WHATSAPP OFICIAL</small><strong>+51 952 391 268</strong></span><ArrowUpRight size={24} /></a><div className="sp-contact-data"><p><MapPin size={19} /> Lima sur</p><a href={`mailto:${content.brand.email}`}><Mail size={19} />{content.brand.email}</a><p><FileCheck2 size={19} /> RUC {content.brand.ruc}</p></div><div className="sp-contact-socials"><p>También estamos en</p>{content.socials.facebook && <a href={content.socials.facebook} target="_blank" rel="noopener noreferrer">Facebook <ArrowUpRight size={17} /></a>}{content.socials.tiktok && <a href={content.socials.tiktok} target="_blank" rel="noopener noreferrer">TikTok <ArrowUpRight size={17} /></a>}</div><aside className="sp-reservation-aside"><CalendarDays size={23} /><h3>Tu adelanto separa la fecha.</h3><p>Si cancelas con más de 72 horas de anticipación, se devuelve. Si faltan 72 horas o menos, el adelanto de separación no es reembolsable.</p><a href={pageHref("condiciones")}>Leer condiciones completas <ArrowUpRight size={15} /></a></aside></div>
+      <form className="sp-quote-form" onSubmit={prepare} onChange={() => { setQuoteHref(""); setError(""); }}><div className="sp-form-heading"><Sparkles size={24} /><div><h2>Tu evento, a tu manera.</h2><p>Empecemos con estos detalles.</p></div></div><label>¿Cómo te llamas?<input name="name" autoComplete="given-name" required maxLength={80} placeholder="Tu nombre" /></label><div className="sp-form-row"><label>¿Qué celebras?<select name="event" required defaultValue=""><option value="" disabled>Elige tu evento</option>{["Cumpleaños", "Matrimonio", "Quinceañero", "Evento de empresa", "Otra celebración"].map(t => <option key={t}>{t}</option>)}</select></label><label>Distrito o lugar<input name="district" required maxLength={120} placeholder="Ej. San Juan de Miraflores" /></label></div><div className="sp-form-row"><label>Fecha del evento<input type="date" name="date" min={minimumDate || undefined} required /></label><label>Hora de inicio<input type="time" name="time" required /></label></div><label>¿Qué plan te interesa?<select value={selectedPackage} onChange={e => setSelectedPackage(e.target.value)} name="package"><option value="">Quiero una propuesta a medida</option>{content.packages.filter(p => p.published).map(p => <option key={p.id} value={p.id}>{p.name} · {p.subtitle}</option>)}</select></label><label>Invitados aproximados <span>(opcional)</span><input name="guests" type="number" min="1" max="100000" placeholder="Ej. 50" /></label><label>Algo más que quieras contarnos <span>(opcional)</span><textarea name="message" maxLength={1000} rows={3} placeholder="Tus personajes favoritos, la temática o una idea especial…" /></label><label className="sp-checkbox"><input type="checkbox" name="accepted" required /><span>He leído las <a href={pageHref("condiciones")} target="_blank" rel="noopener noreferrer">condiciones de reserva y cancelación</a> y la <a href={pageHref("privacidad")} target="_blank" rel="noopener noreferrer">política de privacidad</a>.</span></label>{error && <p className="sp-form-error" role="alert">{error}</p>}<button className="sp-button sp-primary sp-full" type="submit">Preparar consulta <ArrowRight size={19} /></button>{quoteHref && <div className="sp-quote-ready" role="status"><Check size={23} /><p>¡Tu consulta está lista! Ábrela en WhatsApp y revisa el mensaje antes de enviarlo.</p><a className="sp-button sp-whatsapp sp-full" href={quoteHref} target="_blank" rel="noopener noreferrer"><MessageCircle size={19} /> Abrir WhatsApp <ArrowUpRight size={18} /></a></div>}<p className="sp-form-footnote">Este formulario prepara tu mensaje. La reserva se confirma directamente contigo y está sujeta a disponibilidad.</p></form></section>
+    <section className="sp-section sp-lilac-section"><div className="sp-container sp-faq-layout"><div><p className="sp-eyebrow">ANTES DE QUE SUENE LA MÚSICA</p><h2>Resolvamos<br />tus dudas.</h2><p>Queremos que reserves con claridad.</p></div><div className="sp-faq">{questions.map(([q, a]) => <details key={q}><summary>{q}<span aria-hidden="true">+</span></summary><p>{a}</p></details>)}</div></div></section></>;
+}
+
+function Footer({ content, whatsapp }: { content: SiteContent; whatsapp: string }) {
+  return <footer className="sp-footer"><div className="sp-container"><div className="sp-footer-top"><div className="sp-footer-brand"><a href={pageHref("inicio")}><img src={mediaHref("assets/sinteria-logo.png")} alt="Sinteria Producciones" width="210" height="75" loading="lazy" /></a><p>Diversión que hace la diferencia.</p><span>Perteneciente a <strong>{content.brand.group}</strong></span></div><div><h3>Descubre Sinteria</h3><nav aria-label="Navegación del pie de página">{pages.filter(p => ["servicios", "catalogo", "galeria", "nosotros"].includes(p.id)).map(p => <a key={p.id} href={pageHref(p.id)}>{p.label}</a>)}</nav></div><div className="sp-footer-contact"><h3>Hagamos una fiesta</h3><a href={whatsapp} target="_blank" rel="noopener noreferrer">WhatsApp: 952 391 268 <ArrowUpRight size={15} /></a><a href={`mailto:${content.brand.email}`}>{content.brand.email}</a><p>Lima sur, Perú</p><div className="sp-social-links">{content.socials.facebook && <a href={content.socials.facebook} target="_blank" rel="noopener noreferrer">Facebook <ArrowUpRight size={13} /></a>}{content.socials.tiktok && <a href={content.socials.tiktok} target="_blank" rel="noopener noreferrer">TikTok <ArrowUpRight size={13} /></a>}</div></div></div><div className="sp-footer-bottom"><p>© {new Date().getFullYear()} Sinteria Producciones <span>·</span> RUC {content.brand.ruc}</p><nav aria-label="Información legal"><a href={pageHref("condiciones")}>Términos y condiciones</a><a href={pageHref("privacidad")}>Privacidad</a><a href={`mailto:${content.brand.email}?subject=Atenci%C3%B3n%20y%20reclamos`}>Atención y reclamos</a></nav></div></div></footer>;
+}
+
+export default function PublicPages({ content, page }: { content: SiteContent; page: PageId }) {
+  const whatsapp = whatsappLink(content.brand.whatsapp, "¡Hola, Sinteria Producciones! Quiero cotizar un show para mi evento.");
+  return <><a className="sp-skip-link" href="#contenido">Ir al contenido</a><Header page={page} whatsapp={whatsapp} /><main id="contenido">{page === "inicio" ? <Home content={content} whatsapp={whatsapp} /> : page === "servicios" ? <Services content={content} whatsapp={whatsapp} /> : page === "catalogo" ? <Catalog content={content} whatsapp={whatsapp} /> : page === "galeria" ? <><PageIntro page="galeria" eyebrow="AQUÍ SE SIENTE LA ENERGÍA" title="Momentos reales." accent="Recuerdos increíbles." text="Asómate a nuestras celebraciones. Explora las fotos, reproduce los videos y encuentra la inspiración para tu próximo evento." /><section className="sp-section sp-container"><Gallery content={content} /></section><CallToParty whatsapp={whatsapp} /></> : page === "nosotros" ? <About content={content} whatsapp={whatsapp} /> : page === "contacto" ? <Contact content={content} whatsapp={whatsapp} /> : <><PageIntro page={page} eyebrow="INFORMACIÓN PARA CELEBRAR CON CLARIDAD" title={page === "condiciones" ? "Términos y condiciones." : "Política de privacidad."} text={page === "condiciones" ? "Conoce cómo coordinamos tu reserva, el adelanto y las solicitudes de cambio o cancelación." : "Conoce cómo se utiliza la información que decides compartir al consultar por nuestros servicios."} /><section className="sp-container sp-section sp-legal"><LegalContent type={page === "condiciones" ? "terms" : "privacy"} content={content} hasAdmin={false} /><a className="sp-button sp-outline" href={pageHref("contacto")}>Consultar con Sinteria <ArrowUpRight size={18} /></a></section></>}</main><Footer content={content} whatsapp={whatsapp} /><a className="sp-floating-whatsapp" href={whatsapp} target="_blank" rel="noopener noreferrer" aria-label="Hablar con Sinteria por WhatsApp"><MessageCircle size={24} /><span>¡Armemos tu fiesta!</span></a></>;
+}
