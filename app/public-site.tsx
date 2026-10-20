@@ -10,7 +10,7 @@ const services = [
   { icon: Music2, name: "Shows & baile", text: "Ritmo, color y toda la energía del escenario." },
   { icon: Users, name: "Corporativos", text: "Entretenimiento que reúne a tu equipo." },
 ];
-const questions = [
+export const questions = [
   ["¿Cómo separo mi fecha?", "Escríbenos por WhatsApp con la fecha, hora, distrito y servicio. Confirmamos la disponibilidad y el alcance por escrito. El adelanto acordado separa la fecha una vez que recibas nuestra confirmación."],
   ["¿Puedo elegir los personajes?", "Sí. Coordinamos contigo los personajes y la temática. La elección está sujeta a disponibilidad para tu fecha y queda confirmada en la cotización."],
   ["¿El precio incluye movilidad y cuánto dura el show?", "La duración, la movilidad, los personajes y los materiales incluidos se detallan en tu cotización antes de separar. Los precios del catálogo son de referencia para el servicio indicado; cualquier adicional se acuerda contigo."],
@@ -18,7 +18,7 @@ const questions = [
   ["¿Puedo cambiar la fecha?", "Podemos evaluar una reprogramación según disponibilidad. Solicítala por WhatsApp; el cambio solo queda confirmado cuando ambas partes lo acuerdan por escrito."],
   ["¿Tengo que pagar desde esta página?", "La página sirve para conocer nuestros servicios y solicitar una cotización. Toda la coordinación se realiza por nuestro WhatsApp oficial. La fecha no se reserva automáticamente al completar el formulario."],
 ];
-function LegalContent({ type, content, hasAdmin = true }: { type: "terms" | "privacy"; content: SiteContent; hasAdmin?: boolean }) {
+export function LegalContent({ type, content, hasAdmin = true }: { type: "terms" | "privacy"; content: SiteContent; hasAdmin?: boolean }) {
   const b = content.brand;
   return <div className="legal-copy"><p className="eyebrow">SINTERIA PRODUCCIONES · RUC {b.ruc}</p><h2>{type === "terms" ? "Condiciones claras. Celebraciones tranquilas." : "Tu privacidad, con claridad."}</h2>
     {type === "terms" ? <>
@@ -41,11 +41,11 @@ function LegalContent({ type, content, hasAdmin = true }: { type: "terms" | "pri
     <p className="muted legal-date">Última actualización: 8 de octubre de 2026.</p>
   </div>;
 }
-function Viewer({ media, close }: { media: Media; close: () => void }) {
+export function Viewer({ media, close }: { media: Media; close: () => void }) {
   const [playExternal, setPlayExternal] = useState(false);
   return <div className="viewer-inner"><h2>{media.title}</h2>{media.kind === "image" ? <img src={media.url} alt={media.title} /> : media.kind === "video" ? <video src={media.url} poster={media.poster} controls autoPlay playsInline /> : playExternal && youtubeEmbed(media.url) ? <iframe title={media.title} src={`${youtubeEmbed(media.url)}?autoplay=1`} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen /> : <div className="external-video"><Play size={44} /><p>Al reproducir, se cargará contenido de YouTube y se aplicará su política de privacidad.</p><button className="button primary" onClick={() => setPlayExternal(true)}>Reproducir video</button></div>}<button className="text-button" onClick={close}>Volver a la galería</button></div>;
 }
-function Modal({ children, close, label }: { children: React.ReactNode; close: () => void; label: string }) {
+export function Modal({ children, close, label }: { children: React.ReactNode; close: () => void; label: string }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -108,3 +108,4 @@ export default function PublicSite({ initialContent = defaultContent, apiOrigin 
     <a className="floating-whatsapp" href={whatsapp} target="_blank" rel="noopener noreferrer" aria-label="Hablar por WhatsApp"><MessageCircle size={25} /><span>¡Armemos tu fiesta!</span></a>{syncError && <div className="sync-notice" role="status">No pudimos actualizar el catálogo. Puedes consultar la disponibilidad por WhatsApp.</div>}{legal && <Modal label={legal === "terms" ? "Términos y condiciones" : "Política de privacidad"} close={() => setLegal(null)}><LegalContent type={legal} content={content} hasAdmin={!!adminHref} /></Modal>}{selectedMedia && <Modal label={selectedMedia.title} close={() => setSelectedMedia(null)}><Viewer media={selectedMedia} close={() => setSelectedMedia(null)} /></Modal>}
   </>;
 }
+

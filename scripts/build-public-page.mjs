@@ -3,51 +3,60 @@ import react from "@vitejs/plugin-react";
 import { readFile, writeFile, mkdir, cp, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import "./restore-assets.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const content = JSON.parse(await readFile(resolve(root, "public-page/snapshot.json"), "utf8"));
 if (!content?.brand || !Array.isArray(content.packages) || !Array.isArray(content.gallery)
   || content.packages.some(p => !p.published) || content.gallery.some(m => !m.published)) {
-  throw new Error("The build must contain only published public content.");
+  throw new Error("Only published content may be included in the public build.");
 }
-
-const ssr = resolve(root, ".sites-runtime/pages-ssr");
-const out = resolve(root, "docs");
-const retainedMedia = resolve(root, ".sites-runtime/public-media");
-await mkdir(retainedMedia, { recursive: true });
-if (await stat(resolve(out, "media")).catch(() => null)) {
-  await cp(resolve(out, "media"), retainedMedia, { recursive: true });
-}
+const ssr = resolve(root, ".public-runtime/ssr"), out = resolve(root, "docs");
 await build({
   configFile: false, root, publicDir: false, plugins: [react()],
-  build: {
-    ssr: resolve(root, "public-page/server.tsx"), outDir: ssr,
-    target: "node22", emptyOutDir: true,
-    rolldownOptions: { output: { entryFileNames: "render.mjs" } },
-  },
+  build: { ssr: resolve(root, "public-page/server.tsx"), outDir: ssr, target: "node22", emptyOutDir: true,
+    rolldownOptions: { output: { entryFileNames: "render.mjs" } } },
 });
-const { renderPublicPage } = await import(pathToFileURL(resolve(ssr, "render.mjs")).href);
-const page = renderPublicPage(content);
+const { renderPublicPage, pages, SITE_BASE, SITE_ORIGIN } = await import(pathToFileURL(resolve(ssr, "render.mjs")).href);
 await build({
-  configFile: false, root: resolve(root, "public-page"), base: "./", publicDir: false,
-  plugins: [react()], css: { postcss: root },
-  build: { outDir: out, emptyOutDir: true, target: "es2022", assetsInlineLimit: 0 },
+  configFile: false, root: resolve(root, "public-page"), base: SITE_BASE, publicDir: false,
+  plugins: [react()], css: { postcss: { plugins: [] } },
+  build: { outDir: out, emptyOutDir: false, target: "es2022", assetsInlineLimit: 0 },
 });
-
-const publicURL = process.env.PUBLIC_SITE_URL || "https://sinteriaproducciones.github.io/sinteria-producciones./";
-const json = JSON.stringify(content).replaceAll("<", "\\u003c");
 const template = await readFile(resolve(out, "index.html"), "utf8");
-if (!template.includes("<!--PUBLIC_PAGE-->") || !template.includes("<!--PUBLIC_STATE-->")) {
-  throw new Error("Missing public content placeholders.");
+for (const token of ["<!--PUBLIC_PAGE-->", "<!--PUBLIC_STATE-->", "<!--STRUCTURED_DATA-->", "__PAGE_URL__"]) {
+  if (!template.includes(token)) throw new Error("Missing build placeholder: " + token);
 }
-await writeFile(resolve(out, "index.html"), template.replace("<!--PUBLIC_PAGE-->", page)
-  .replace("<!--PUBLIC_STATE-->", json).replaceAll("__PUBLIC_URL__", publicURL));
+const escapeAttr = s => s.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
+const scriptJSON = value => JSON.stringify(value).replaceAll("<", "\\u003c");
+const publicURL = SITE_ORIGIN + SITE_BASE;
+const organization = { "@type": "Organization", "@id": publicURL + "#organization", name: "Sinteria Producciones", url: publicURL,
+  logo: publicURL + "assets/sinteria-logo.png", taxID: content.brand.ruc, telephone: "+" + content.brand.whatsapp,
+  email: content.brand.email, areaServed: "Lima sur, Perú", parentOrganization: { "@type": "Organization", name: content.brand.group },
+  sameAs: Object.values(content.socials).filter(Boolean) };
+for (const page of pages) {
+  const url = publicURL + page.path, directory = resolve(out, page.path);
+  await mkdir(directory, { recursive: true });
+  const structured = { "@context": "https://schema.org", "@graph": [organization,
+    { "@type": "WebPage", "@id": url + "#page", url, name: page.title, description: page.description,
+      inLanguage: "es-PE", about: { "@id": publicURL + "#organization" } }] };
+  if (page.id === "inicio") structured["@graph"].push({ "@type": "VideoObject", name: "Así se vive una hora loca con Sinteria",
+    description: "Personajes, baile y alegría en una celebración de Sinteria Producciones.",
+    thumbnailUrl: publicURL + "media/portada-124865.webp", contentUrl: publicURL + "media/portada-124865.mp4",
+    uploadDate: "2026-10-20T12:00:00-05:00", duration: "PT22.367S" });
+  const extraHead = page.id === "inicio" ? '<link rel="preload" as="image" href="' + SITE_BASE + 'media/portada-124865.webp" fetchpriority="high" />' : "";
+  const html = template.replaceAll("__PAGE_TITLE__", escapeAttr(page.title)).replaceAll("__PAGE_DESCRIPTION__", escapeAttr(page.description))
+    .replaceAll("__PAGE_URL__", url).replace("<!--PAGE_EXTRA_HEAD-->", extraHead)
+    .replace("<!--PUBLIC_PAGE-->", renderPublicPage(content, page.id))
+    .replace("<!--PUBLIC_STATE-->", scriptJSON({ content, page: page.id }))
+    .replace("<!--STRUCTURED_DATA-->", scriptJSON(structured));
+  await writeFile(resolve(directory, "index.html"), html);
+}
+const notFound = '<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Página no encontrada | Sinteria Producciones</title><body style="font-family:system-ui;background:#fff5ed;color:#624073;padding:10vh 7vw"><p>SINTERIA PRODUCCIONES</p><h1>Esta página se fue a la pista.</h1><p>Vuelve al inicio para explorar nuestros servicios y catálogos.</p><a href="' + SITE_BASE + '">Volver al inicio →</a></body></html>';
+await writeFile(resolve(out, "404.html"), notFound);
 await writeFile(resolve(out, ".nojekyll"), "");
-await writeFile(resolve(out, "sitemap.xml"), '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>' + publicURL + '</loc></url></urlset>\n');
+await writeFile(resolve(out, "sitemap.xml"), '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + pages.map(p => "<url><loc>" + publicURL + p.path + "</loc></url>").join("") + "</urlset>\n");
 await writeFile(resolve(out, "robots.txt"), "User-agent: *\nAllow: /\nSitemap: " + publicURL + "sitemap.xml\n");
-await cp(resolve(root, "public/favicon.svg"), resolve(out, "favicon.svg"));
-await cp(resolve(root, "public/assets/sinteria-logo.png"), resolve(out, "assets/sinteria-logo.png"));
-await cp(resolve(root, "public/assets/fiesta-hero.png"), resolve(out, "assets/fiesta-hero.png"));
-await cp(retainedMedia, resolve(out, "media"), { recursive: true });
-console.log(JSON.stringify({ directory: out, gallery: content.gallery.length, catalogs: content.packages.length, publicURL, admin: false, liveAPI: false }));
+if (await stat(resolve(root, "public/favicon.svg")).catch(() => null)) await cp(resolve(root, "public/favicon.svg"), resolve(out, "favicon.svg"));
+console.log(JSON.stringify({ directory: out, pages: pages.length, gallery: content.gallery.length + 1, catalogs: content.packages.length,
+  publicURL, heroVideo: "124865.mp4", admin: "pending; not included", preservedExistingMedia: true }));
+

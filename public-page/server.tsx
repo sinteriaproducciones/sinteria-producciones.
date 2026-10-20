@@ -1,7 +1,9 @@
 import { renderToString } from "react-dom/server";
-import PublicSite from "../app/public-site.tsx";
+import PublicPages, { pages, SITE_BASE, SITE_ORIGIN, type PageId } from "../app/public-pages.tsx";
 import type { SiteContent } from "../lib/content.ts";
 
-export function renderPublicPage(content: SiteContent) {
-  return renderToString(<PublicSite initialContent={content} adminHref={null} liveUpdates={false} logoSrc="./assets/sinteria-logo.png" />);
+export { pages, SITE_BASE, SITE_ORIGIN };
+export function renderPublicPage(content: SiteContent, page: PageId) {
+  return renderToString(<PublicPages content={content} page={page} />);
 }
+
