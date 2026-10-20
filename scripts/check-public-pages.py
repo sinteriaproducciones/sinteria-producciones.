@@ -23,6 +23,7 @@ class Page(HTMLParser):
         self.state = ''
         self.in_state = False
         self.videos = []
+        self.cover = None
         self.required_fields = []
 
     def handle_starttag(self, tag, attrs):
@@ -35,6 +36,8 @@ class Page(HTMLParser):
             self.resources.append(a['src'])
         if tag == 'video':
             self.videos.append(a)
+        if tag == 'img' and 'sp-cover-photo' in a.get('class', '').split():
+            self.cover = a
         if tag == 'link' and a.get('rel') == 'stylesheet':
             self.resources.append(a['href'])
         if tag == 'link' and a.get('rel') == 'canonical':
@@ -109,27 +112,29 @@ for route in ROUTES:
         relative = 'docs/' + unquote(url.path[len(BASE):])
         assert (ROOT / relative).is_file() or relative in existing, (route, resource, 'missing media')
         resources.add(relative)
+    assert not p.videos, (route, 'videos must load only when requested in the gallery')
     if not route:
-        assert len(p.videos) == 1
-        video = p.videos[0]
-        assert video['src'] == BASE + 'media/portada-124865.mp4'
-        assert all(k in video for k in ['autoplay', 'muted', 'playsinline', 'loop'])
-        assert video['poster'] == BASE + 'media/portada-124865.webp'
-    else:
-        assert not p.videos, (route, 'unnecessary eager video load')
+        assert p.cover is not None, 'missing photo cover'
+        assert p.cover['src'] == BASE + 'media/portada-fiesta-1536.webp'
+        assert (p.cover['width'], p.cover['height']) == ('1536', '1152')
+        assert '768w' in p.cover['srcset'] and '1536w' in p.cover['srcset']
+        assert p.cover['sizes'] == '100vw' and p.cover['fetchpriority'] == 'high'
+        assert '"@type":"VideoObject"' not in raw
+        assert 'media/portada-fiesta-1536.webp' in raw
+        assert raw.count('sp-service-cover') == 3, 'service photos missing'
     if route == 'contacto/':
         assert set(['name', 'event', 'district', 'date', 'time', 'accepted']) <= set(p.required_fields)
 
 assert len(set(titles)) == len(ROUTES)
 assert (ROOT / 'docs/404.html').is_file()
 assert not (ROOT / 'docs/admin').exists()
-video = ROOT / 'docs/media/portada-124865.mp4'
-data = json.loads(subprocess.check_output(['ffprobe', '-v', 'quiet', '-show_format', '-show_streams', '-of', 'json', str(video)]))
-v = next(s for s in data['streams'] if s['codec_type'] == 'video')
-assert v['codec_name'] == 'h264' and v['width'] < v['height']
-assert abs(float(data['format']['duration']) - 22.366667) < .15, 'video duration changed'
-assert any(s['codec_type'] == 'audio' for s in data['streams'])
-assert video.stat().st_size < 2_000_000
-data_bytes = video.read_bytes()
-assert data_bytes.index(b'moov') < data_bytes.index(b'mdat'), 'fast start missing'
-print(json.dumps({'passed': True, 'pages': len(ROUTES), 'media_and_script_paths_checked': len(resources), 'video_seconds': data['format']['duration'], 'video_bytes': video.stat().st_size, 'catalog_prices': [180, 280, 380], 'admin': 'pending, absent from public build'}))
+photos = []
+for width in [1536, 768]:
+    photo = ROOT / f'docs/media/portada-fiesta-{width}.webp'
+    data = json.loads(subprocess.check_output(['ffprobe', '-v', 'quiet', '-show_streams', '-of', 'json', str(photo)]))
+    image = data['streams'][0]
+    assert image['codec_name'] == 'webp'
+    assert (image['width'], image['height']) == (width, width * 3 // 4), 'cover was cropped'
+    assert photo.stat().st_size < 400_000, 'photo too heavy'
+    photos.append({'width': width, 'height': image['height'], 'bytes': photo.stat().st_size})
+print(json.dumps({'passed': True, 'pages': len(ROUTES), 'media_and_script_paths_checked': len(resources), 'cover': photos, 'eager_videos': 0, 'catalog_prices': [180, 280, 380], 'admin': 'pending, absent from public build'}))

@@ -39,11 +39,10 @@ for (const page of pages) {
   const structured = { "@context": "https://schema.org", "@graph": [organization,
     { "@type": "WebPage", "@id": url + "#page", url, name: page.title, description: page.description,
       inLanguage: "es-PE", about: { "@id": publicURL + "#organization" } }] };
-  if (page.id === "inicio") structured["@graph"].push({ "@type": "VideoObject", name: "Así se vive una hora loca con Sinteria",
-    description: "Personajes, baile y alegría en una celebración de Sinteria Producciones.",
-    thumbnailUrl: publicURL + "media/portada-124865.webp", contentUrl: publicURL + "media/portada-124865.mp4",
-    uploadDate: "2026-10-20T12:00:00-05:00", duration: "PT22.367S" });
-  const extraHead = page.id === "inicio" ? '<link rel="preload" as="image" href="' + SITE_BASE + 'media/portada-124865.webp" fetchpriority="high" />' : "";
+  if (page.id === "inicio") structured["@graph"].push({ "@type": "ImageObject", name: "Una celebración con Sinteria Producciones",
+    contentUrl: publicURL + "media/portada-fiesta-1536.webp", width: 1536, height: 1152,
+    caption: "Personajes e invitados en una fiesta de cumpleaños." });
+  const extraHead = page.id === "inicio" ? '<link rel="preload" as="image" href="' + SITE_BASE + 'media/portada-fiesta-1536.webp" imagesrcset="' + SITE_BASE + 'media/portada-fiesta-768.webp 768w, ' + SITE_BASE + 'media/portada-fiesta-1536.webp 1536w" imagesizes="100vw" fetchpriority="high" />' : "";
   const html = template.replaceAll("__PAGE_TITLE__", escapeAttr(page.title)).replaceAll("__PAGE_DESCRIPTION__", escapeAttr(page.description))
     .replaceAll("__PAGE_URL__", url).replace("<!--PAGE_EXTRA_HEAD-->", extraHead)
     .replace("<!--PUBLIC_PAGE-->", renderPublicPage(content, page.id))
@@ -57,6 +56,6 @@ await writeFile(resolve(out, ".nojekyll"), "");
 await writeFile(resolve(out, "sitemap.xml"), '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + pages.map(p => "<url><loc>" + publicURL + p.path + "</loc></url>").join("") + "</urlset>\n");
 await writeFile(resolve(out, "robots.txt"), "User-agent: *\nAllow: /\nSitemap: " + publicURL + "sitemap.xml\n");
 if (await stat(resolve(root, "public/favicon.svg")).catch(() => null)) await cp(resolve(root, "public/favicon.svg"), resolve(out, "favicon.svg"));
-console.log(JSON.stringify({ directory: out, pages: pages.length, gallery: content.gallery.length + 1, catalogs: content.packages.length,
-  publicURL, heroVideo: "124865.mp4", admin: "pending; not included", preservedExistingMedia: true }));
+console.log(JSON.stringify({ directory: out, pages: pages.length, gallery: content.gallery.length + 2, catalogs: content.packages.length,
+  publicURL, heroPhoto: "portada-fiesta-1536.webp", admin: "pending; not included", preservedExistingMedia: true }));
 

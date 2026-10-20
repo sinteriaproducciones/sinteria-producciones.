@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowUpRight, ArrowRight, Check, ChevronRight, X, Menu, MessageCircle, Sparkles, PartyPopper, Mic2, Music2, Users, CalendarDays, FileCheck2, Play, Pause, Volume2, VolumeX, MapPin, Mail, Heart, Star, Expand } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { ArrowUpRight, ArrowRight, Check, ChevronRight, X, Menu, MessageCircle, Sparkles, PartyPopper, Mic2, Music2, Users, CalendarDays, FileCheck2, Play, MapPin, Mail, Heart, Star, Cake, Crown } from "lucide-react";
 import { limaToday, money, whatsappLink, type SiteContent, type Media, type Package } from "../lib/content.ts";
 import { LegalContent, Modal, Viewer, questions } from "./public-site.tsx";
 
@@ -21,11 +21,14 @@ export const pageHref = (page: PageId) => SITE_BASE + pages.find(p => p.id === p
 export const mediaHref = (path: string) => /^https:\/\//.test(path) ? path : path.startsWith(SITE_BASE) ? path : SITE_BASE + path.replace(/^\.?\//, "");
 const videoURL = mediaHref("media/portada-124865.mp4");
 const posterURL = mediaHref("media/portada-124865.webp");
+const heroPhoto = mediaHref("media/portada-fiesta-1536.webp");
+const heroPhotoSmall = mediaHref("media/portada-fiesta-768.webp");
+const heroMedia: Media = { id: "portada-fiesta", title: "Una celebración llena de alegría", category: "Horas locas", kind: "image", url: heroPhoto, published: true };
 const coverMedia: Media = { id: "portada-124865", title: "Así se vive una hora loca con Sinteria", category: "Horas locas", kind: "video", url: videoURL, poster: posterURL, published: true };
 const serviceList = [
-  { icon: PartyPopper, name: "Hora loca", text: "Ese momento en que la celebración se enciende y todos se suman a la fiesta.", detail: "Personajes, baile e interacción para compartir con tus invitados.", color: "pink" },
-  { icon: Star, name: "Personajes", text: "Tus favoritos llegan a la pista para llenar tu evento de risas y buenos momentos.", detail: "Consulta los personajes disponibles para tu fecha y arma tu combinación.", color: "purple" },
-  { icon: Mic2, name: "Animación", text: "Conectamos con tus invitados y le damos ritmo a cada momento de tu celebración.", detail: "Coordinamos contigo la dinámica, el espacio y los detalles de tu evento.", color: "yellow" },
+  { icon: PartyPopper, name: "Hora loca", text: "Ese momento en que la celebración se enciende y todos se suman a la fiesta.", detail: "Personajes, baile e interacción para compartir con tus invitados.", color: "pink", image: "media/portada-fiesta-768.webp", alt: "Personajes de pelo rubio e invitados en una celebración", position: "50% 56%" },
+  { icon: Star, name: "Personajes", text: "Tus favoritos llegan a la pista para llenar tu evento de risas y buenos momentos.", detail: "Consulta los personajes disponibles para tu fecha y arma tu combinación.", color: "purple", image: "media/117024.jpg", alt: "Tres personajes de Sinteria Producciones con sus trajes de show", position: "50% 36%" },
+  { icon: Mic2, name: "Animación", text: "Conectamos con tus invitados y le damos ritmo a cada momento de tu celebración.", detail: "Coordinamos contigo la dinámica, el espacio y los detalles de tu evento.", color: "yellow", image: "media/117020.jpg", alt: "Invitados compartiendo una hora loca de Sinteria Producciones", position: "50% 35%" },
   { icon: Music2, name: "Shows y baile", text: "Música, movimiento y la energía que hace que nadie quiera quedarse sentado.", detail: "El alcance, la duración y los elementos incluidos se acuerdan antes de reservar.", color: "teal" },
 ];
 
@@ -45,57 +48,11 @@ function Header({ page, whatsapp }: { page: PageId; whatsapp: string }) {
     </div></header></>;
 }
 
-function HeroVideo() {
-  const ref = useRef<HTMLVideoElement>(null), manuallyPaused = useRef(false);
-  const [paused, setPaused] = useState(false), [muted, setMuted] = useState(true), [failed, setFailed] = useState(false);
-  useEffect(() => {
-    const video = ref.current;
-    if (!video) return;
-    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let inView = true;
-    const update = () => {
-      if (motion.matches || document.visibilityState !== "visible" || !inView || manuallyPaused.current) video.pause();
-      else video.play().catch(() => setPaused(true));
-    };
-    const observer = new IntersectionObserver(entries => { inView = entries[0].isIntersecting; update(); }, { threshold: 0.15 });
-    observer.observe(video);
-    document.addEventListener("visibilitychange", update);
-    motion.addEventListener("change", update);
-    update();
-    return () => { observer.disconnect(); document.removeEventListener("visibilitychange", update); motion.removeEventListener("change", update); };
-  }, []);
-  function playPause() {
-    const video = ref.current;
-    if (!video) return;
-    if (video.paused) { manuallyPaused.current = false; video.play().catch(() => setPaused(true)); }
-    else { manuallyPaused.current = true; video.pause(); }
-  }
-  function sound() {
-    const video = ref.current;
-    if (!video) return;
-    video.muted = !video.muted;
-    setMuted(video.muted);
-    if (video.paused) { manuallyPaused.current = false; video.play().catch(() => setPaused(true)); }
-  }
-  function fullscreen() {
-    const video = ref.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
-    if (video?.requestFullscreen) video.requestFullscreen().catch(() => undefined);
-    else video?.webkitEnterFullscreen?.();
-  }
-  return <div className="sp-hero-stage"><span className="sp-stage-orbit" aria-hidden="true" /><div className="sp-stage-label"><span className="sp-live-dot" /> ASÍ SE VIVE SINTERIA</div>
-    <div className="sp-video-card"><div className="sp-video-screen"><video ref={ref} src={videoURL} poster={posterURL} autoPlay loop muted playsInline preload="metadata" aria-label="Hora loca de Sinteria Producciones. Video de portada." onPlay={() => setPaused(false)} onPause={() => setPaused(true)} onVolumeChange={e => setMuted(e.currentTarget.muted)} onError={() => setFailed(true)} />
-      {failed && <div className="sp-video-error"><p>No pudimos cargar este video.</p><a href={pageHref("galeria")}>Ver nuestra galería <ArrowRight size={17} /></a></div>}
-      {paused && !failed && <button className="sp-play-overlay" onClick={playPause} aria-label="Reproducir el video de portada"><Play size={30} fill="currentColor" /></button>}
-    </div><div className="sp-video-controls"><button onClick={playPause} aria-label={paused ? "Reproducir video" : "Pausar video"}>{paused ? <Play size={18} /> : <Pause size={18} />}</button><button className="sp-sound-control" onClick={sound} aria-label={muted ? "Activar sonido" : "Silenciar video"}>{muted ? <VolumeX size={18} /> : <Volume2 size={18} />}<span>{muted ? "Activar sonido" : "Sonido activado"}</span></button><button onClick={fullscreen} aria-label="Ver video en pantalla completa"><Expand size={18} /></button></div></div>
-    <div className="sp-party-sticker"><PartyPopper size={24} /><span>¡La fiesta<br /><strong>la ponemos juntos!</strong></span></div><span className="sp-stage-sparkle" aria-hidden="true">✦</span>
-  </div>;
-}
-
 function PageIntro({ page, eyebrow, title, accent, text }: { page: PageId; eyebrow: string; title: string; accent?: string; text: string }) {
   return <section className="sp-page-intro"><div className="sp-container"><nav className="sp-breadcrumb" aria-label="Ruta de navegación"><a href={pageHref("inicio")}>Inicio</a><ChevronRight size={14} /><span aria-current="page">{pages.find(p => p.id === page)?.label}</span></nav><p className="sp-eyebrow">{eyebrow}</p><h1>{title} {accent && <span>{accent}</span>}</h1><p className="sp-intro-text">{text}</p></div><span className="sp-intro-star" aria-hidden="true">✦</span></section>;
 }
 
-function SectionHeading({ eyebrow, title, text, href, label }: { eyebrow: string; title: string; text?: string; href?: string; label?: string }) {
+function SectionHeading({ eyebrow, title, text, href, label }: { eyebrow: string; title: ReactNode; text?: string; href?: string; label?: string }) {
   return <div className="sp-section-heading"><div><p className="sp-eyebrow">{eyebrow}</p><h2>{title}</h2>{text && <p>{text}</p>}</div>{href && <a className="sp-text-link" href={href}>{label} <ArrowUpRight size={20} /></a>}</div>;
 }
 
@@ -110,11 +67,11 @@ function CatalogCards({ content }: { content: SiteContent }) {
 
 function Gallery({ content, preview = false }: { content: SiteContent; preview?: boolean }) {
   const [filter, setFilter] = useState("Todos"), [selected, setSelected] = useState<Media | null>(null), [count, setCount] = useState(9);
-  const all = [coverMedia, ...content.gallery.filter(m => m.published)];
-  const visible = preview ? [coverMedia, ...all.filter(m => m.kind === "image").slice(3, 5)] : all.filter(m => filter === "Todos" || (filter === "Fotos" ? m.kind === "image" : m.kind !== "image"));
+  const all = [heroMedia, coverMedia, ...content.gallery.filter(m => m.published)];
+  const visible = preview ? [heroMedia, ...content.gallery.filter(m => m.published && m.kind === "image").slice(3, 5)] : all.filter(m => filter === "Todos" || (filter === "Fotos" ? m.kind === "image" : m.kind !== "image"));
   const normalized = (m: Media) => ({ ...m, url: mediaHref(m.url), poster: m.poster ? mediaHref(m.poster) : undefined });
   return <>{!preview && <div className="sp-gallery-toolbar"><div className="sp-filters" aria-label="Filtrar galería">{["Todos", "Fotos", "Videos"].map(f => <button key={f} className={filter === f ? "is-active" : ""} aria-pressed={filter === f} onClick={() => { setFilter(f); setCount(9); }}>{f}</button>)}</div><p aria-live="polite">{visible.length} {visible.length === 1 ? "momento" : "momentos"} para compartir</p></div>}
-    <div className={preview ? "sp-gallery-grid is-preview" : "sp-gallery-grid"}>{visible.slice(0, preview ? 3 : count).map((m, i) => <button className="sp-gallery-card" key={m.id} onClick={() => setSelected(normalized(m))} aria-label={`${m.kind === "image" ? "Ampliar foto" : "Reproducir video"}: ${m.title}`}><img src={mediaHref(m.kind === "image" ? m.url : m.poster || content.brand.hero)} alt={m.title} width="480" height="640" loading="lazy" /><span className="sp-media-type">{m.kind === "image" ? "FOTO" : "VIDEO"}</span>{m.kind !== "image" && <span className="sp-gallery-play"><Play size={25} fill="currentColor" /></span>}<span className="sp-gallery-caption"><small>{i === 0 && m.id === coverMedia.id ? "NUESTRO NUEVO VIDEO" : m.category}</small><strong>{m.title}</strong><ArrowUpRight size={20} /></span></button>)}</div>
+    <div className={preview ? "sp-gallery-grid is-preview" : "sp-gallery-grid"}>{visible.slice(0, preview ? 3 : count).map((m, i) => <button className="sp-gallery-card" key={m.id} onClick={() => setSelected(normalized(m))} aria-label={`${m.kind === "image" ? "Ampliar foto" : "Reproducir video"}: ${m.title}`}><img src={mediaHref(m.kind === "image" ? m.url : m.poster || content.brand.hero)} alt={m.title} width="480" height="640" loading="lazy" /><span className="sp-media-type">{m.kind === "image" ? "FOTO" : "VIDEO"}</span>{m.kind !== "image" && <span className="sp-gallery-play"><Play size={25} fill="currentColor" /></span>}<span className="sp-gallery-caption"><small>{i === 0 && m.id === coverMedia.id ? "ASÍ SE VIVE LA FIESTA" : m.category}</small><strong>{m.title}</strong><ArrowUpRight size={20} /></span></button>)}</div>
     {!preview && count < visible.length && <div className="sp-centered"><button className="sp-button sp-outline" onClick={() => setCount(count + 9)}>Ver más momentos <ArrowRight size={18} /></button></div>}
     {selected && <Modal label={selected.title} close={() => setSelected(null)}><Viewer media={selected} close={() => setSelected(null)} /></Modal>}</>;
 }
@@ -128,11 +85,21 @@ function CallToParty({ whatsapp }: { whatsapp: string }) {
 }
 
 function Home({ content, whatsapp }: { content: SiteContent; whatsapp: string }) {
-  return <><section className="sp-hero"><div className="sp-container sp-hero-grid"><div className="sp-hero-copy"><p className="sp-eyebrow"><span className="sp-mini-spark">✦</span> HORA LOCA, ALEGRÍA Y MUCHA DIVERSIÓN</p><h1>{content.brand.headline}<br /><span>{content.brand.highlight}</span></h1><p className="sp-hero-description">{content.brand.description}</p><div className="sp-hero-actions"><a className="sp-button sp-primary" href={pageHref("contacto")}>Quiero mi hora loca <ArrowUpRight size={20} /></a><a className="sp-button sp-outline" href={pageHref("catalogo")}>Explorar catálogos <ArrowRight size={18} /></a></div><div className="sp-hero-note"><span><MapPin size={16} /> Lima sur</span><span><MessageCircle size={16} /> Contacto directo</span></div></div><HeroVideo /></div><span className="sp-confetti sp-confetti-one" aria-hidden="true" /><span className="sp-confetti sp-confetti-two" aria-hidden="true" /></section>
-    <div className="sp-party-ribbon" aria-label="Para cumpleaños, matrimonios, quinceañeros y eventos de empresa"><span>CUMPLEAÑOS</span><Star /><span>MATRIMONIOS</span><Star /><span>QUINCEAÑEROS</span><Star /><span>EVENTOS DE EMPRESA</span><Star /><span>¡QUE COMIENCE LA FIESTA!</span></div>
-    <section className="sp-section sp-container"><SectionHeading eyebrow="HAY MUCHAS FORMAS DE CELEBRAR" title="Tu evento, con toda la energía." href={pageHref("servicios")} label="Descubrir servicios" /><div className="sp-service-preview">{serviceList.slice(0, 3).map(({ icon: Icon, name, text, color }) => <a href={pageHref("servicios")} className={`sp-service-mini sp-${color}`} key={name}><span className="sp-service-icon"><Icon size={28} /></span><h3>{name}</h3><p>{text}</p><span className="sp-service-more">Conoce más <ArrowUpRight size={17} /></span></a>)}</div></section>
-    <section className="sp-section sp-pink-section"><div className="sp-container"><SectionHeading eyebrow="ELIGE TU PUNTO DE PARTIDA" title="Más personajes. Más momentos." text="Explora nuestros planes y encuentra la chispa de tu celebración." href={pageHref("catalogo")} label="Ver catálogos" /><CatalogCards content={content} /></div></section>
-    <section className="sp-section sp-container"><SectionHeading eyebrow="ASÍ NOS DIVERTIMOS" title="La mejor presentación: la fiesta." text="Fotos y videos de nuestras celebraciones. Dale play y siente la energía." href={pageHref("galeria")} label="Entrar a la galería" /><Gallery content={content} preview /></section>
+  return <><section className="sp-photo-hero" aria-labelledby="portada-titulo">
+      <div className="sp-hero-visual"><img className="sp-cover-photo" src={heroPhoto} srcSet={`${heroPhotoSmall} 768w, ${heroPhoto} 1536w`} sizes="100vw" width="1536" height="1152" fetchPriority="high" alt="Los personajes de pelo rubio de Sinteria Producciones junto a los invitados de una fiesta de cumpleaños" /></div>
+      <div className="sp-hero-shade" aria-hidden="true" />
+      <div className="sp-container sp-photo-content"><div className="sp-photo-copy">
+        <p className="sp-eyebrow">HORA LOCA, ALEGRÍA Y MUCHA DIVERSIÓN</p>
+        <h1 id="portada-titulo">{content.brand.headline}<br /><span>{content.brand.highlight}</span></h1>
+        <p className="sp-photo-description">{content.brand.description}</p>
+        <div className="sp-hero-actions"><a className="sp-button sp-primary" href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle size={21} /> Quiero mi hora loca <ArrowRight size={20} /></a><a className="sp-button sp-outline" href={pageHref("catalogo")}>Explorar catálogos <ArrowRight size={20} /></a></div>
+        <div className="sp-hero-note"><span><MapPin size={18} /> Lima sur</span><span><Sparkles size={18} /> Contacto directo</span></div>
+      </div></div>
+    </section>
+    <div className="sp-celebrations" aria-label="Celebramos contigo"><div className="sp-container">{[[Cake, "Cumpleaños"], [Heart, "Matrimonios"], [Crown, "Quinceañeros"], [PartyPopper, "Eventos de empresa"]].map(([Icon, label]) => { const I = Icon as typeof Cake; return <span key={String(label)}><I size={29} /><strong>{String(label)}</strong></span>; })}</div></div>
+    <section className="sp-services-showcase"><div className="sp-section sp-container"><SectionHeading eyebrow="HAY MUCHAS FORMAS DE CELEBRAR" title={<>Tu evento,<span> con toda la energía.</span></>} href={pageHref("servicios")} label="Descubrir servicios" /><div className="sp-service-preview">{serviceList.slice(0, 3).map(({ icon: Icon, name, text, color, image, alt, position }) => <a href={pageHref("servicios")} className={`sp-service-mini sp-service-with-photo sp-${color}`} key={name}><div className="sp-service-cover"><img src={mediaHref(image!)} alt={alt} width="640" height="420" loading="lazy" style={{ objectPosition: position }} /></div><div className="sp-service-card-body"><span className="sp-service-icon"><Icon size={31} /></span><h3>{name}</h3><p>{text}</p><span className="sp-service-more">Conoce más <ArrowRight size={19} /></span></div></a>)}</div></div></section>
+    <section className="sp-section sp-party-catalog"><span className="sp-catalog-spark" aria-hidden="true"><Sparkles /><Crown /></span><div className="sp-container"><SectionHeading eyebrow="ELIGE TU PUNTO DE PARTIDA" title={<>Más personajes.<span> Más momentos.</span></>} text="Explora nuestros planes y encuentra la chispa de tu celebración." href={pageHref("catalogo")} label="Ver catálogos" /><CatalogCards content={content} /></div></section>
+    <section className="sp-section sp-container sp-home-gallery"><SectionHeading eyebrow="ASÍ NOS DIVERTIMOS" title={<>Momentos reales.<span> Recuerdos increíbles.</span></>} text="Personajes, amigos y familia. Asómate a nuestras celebraciones y siente la energía." href={pageHref("galeria")} label="Fotos y videos" /><Gallery content={content} preview /></section>
     <section className="sp-about-preview"><div className="sp-container sp-about-grid"><div><p className="sp-eyebrow">SOMOS SINTERIA PRODUCCIONES</p><h2>Nos tomamos en serio<br /><span>hacerte sonreír.</span></h2><p>Creemos en las celebraciones que se viven juntos. Por eso coordinamos contigo los personajes, el show y cada detalle de tu reserva.</p><a href={pageHref("nosotros")} className="sp-text-link">Conoce quiénes somos <ArrowUpRight size={18} /></a></div><div className="sp-trust-box"><div><FileCheck2 size={25} /><span><small>IDENTIFICACIÓN DEL NEGOCIO</small><strong>RUC {content.brand.ruc}</strong></span></div><div><MessageCircle size={25} /><span><small>CONVERSEMOS DIRECTAMENTE</small><strong>WhatsApp 952 391 268</strong></span></div><div><Heart size={25} /><span><small>PERTENECIENTE A</small><strong>{content.brand.group}</strong></span></div></div></div></section>
     <HowToReserve /><CallToParty whatsapp={whatsapp} /></>;
 }

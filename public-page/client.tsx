@@ -2,6 +2,7 @@ import { hydrateRoot } from "react-dom/client";
 import PublicPages, { pages, type PageId } from "../app/public-pages.tsx";
 import type { SiteContent } from "../lib/content.ts";
 import "../app/public-pages.css";
+import "../app/party-theme.css";
 
 const saved = document.getElementById("public-state")?.textContent;
 const root = document.getElementById("root");
