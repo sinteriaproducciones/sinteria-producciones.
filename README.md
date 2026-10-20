@@ -9,22 +9,25 @@ WhatsApp: 952391268. RUC: 10742038551. Perteneciente a Sinteria Group.
 
 ## Actualización de la página pública · 20 de octubre de 2026
 
-La portada presenta el tercer video que entregó el propietario, 124865.mp4,
-completo y optimizado para la web. Se reproduce en vertical, sin recortar el
-contenido; el sonido se activa mediante un botón. Incluye pausa, pantalla
-completa y respeto por la preferencia de movimiento reducido. Se pausa al salir
-de la vista o cambiar de pestaña.
+La portada usa la segunda imagen entregada por el propietario el 20 de octubre:
+un grupo de invitados con los dos personajes de pelo rubio y el logo Sinteria.
+Se conserva su encuadre completo 4:3, sin reconstruir personas ni usar las
+composiciones irreales de las referencias. Se entrega en WebP de 1536 y 768 px
+según la pantalla. En teléfono, la foto se muestra completa y el texto aparece
+debajo; en PC, el texto se superpone con un degradado para facilitar su lectura.
 
-La navegación abre páginas HTML independientes: Inicio, Servicios, Catálogos,
-Galería, Nosotros, Contacto, Condiciones y Privacidad. Cada ruta tiene su propia
-dirección, título, descripción y URL canónica; funciona al abrirla o recargarla
-directamente. El diseño utiliza fondos claros, colores de fiesta y disposición
-adaptable para teléfono y PC.
+El diseño sigue las referencias de fiesta del propietario: cabecera oscura,
+acentos neón fucsia y violeta, botones luminosos, tarjetas de servicios con
+fotos y una sección de planes en contraste. La navegación abre páginas HTML
+independientes: Inicio, Servicios, Catálogos, Galería, Nosotros, Contacto,
+Condiciones y Privacidad. Cada ruta tiene su dirección, título, descripción y
+URL canónica y funciona al abrirla o recargarla directamente.
 
-Se conservan las nueve fotos, diez videos anteriores, fotos de los catálogos,
-redes oficiales y tarifas iniciales S/180, S/280 y S/380. El nuevo video también
-aparece en la galería. Los filtros y la carga progresiva evitan descargar todos
-los videos a la vez; los clips de la galería se cargan al abrirlos.
+Se conservan las nueve fotos y diez videos anteriores, las fotos de los
+catálogos, redes oficiales y tarifas S/180, S/280 y S/380. La foto nueva también
+se puede ampliar desde la galería. El video 124865.mp4 se retiró de la portada
+y sigue disponible en la galería junto a los demás clips. La galería reúne
+10 fotos y 11 videos y solo descarga los clips al abrirlos.
 
 El formulario de Contacto prepara un mensaje de WhatsApp que la persona revisa
 y decide enviar. No procesa pagos ni crea reservas automáticamente.
@@ -40,13 +43,13 @@ https://github.com/sinteriaproducciones/sinteria-producciones./pull/1
 
 Cuando el propietario pida retomarlo, integrar primero los cambios de main
 y adaptar la conexión de contenido a las nuevas páginas. No fusionar el
-borrador directamente sobre esta actualización ni reemplazar la portada de
-video por la foto anterior. No contratar servicios de pago.
+borrador directamente sobre esta actualización ni reemplazar la nueva portada
+y el diseño. No contratar servicios de pago.
 
 ## Archivos y compilación pública
 
 La interfaz publicada se encuentra en app/public-pages.tsx y
-app/public-pages.css. Las funciones de condiciones, privacidad y visor de
+app/public-pages.css, con el tema en app/party-theme.css. Las funciones de condiciones, privacidad y visor de
 app/public-site.tsx se reutilizan sin cambiar las condiciones acordadas.
 
 public-page/snapshot.json conserva los datos de negocio y los materiales
@@ -64,18 +67,21 @@ Las dependencias mínimas y sus versiones están en public-build. Para compilar:
 5. Ejecutar python3 scripts/check-public-pages.py; requiere ffprobe.
 
 El script de verificación comprueba rutas, enlaces, recursos, metadatos, campos
-del formulario, precios, RUC, WhatsApp, duración del video y ausencia del panel.
+del formulario, precios, RUC, WhatsApp, fotos de portada y ausencia del panel.
 
-## Video de portada
+## Foto de portada y video conservado
 
-Se generó desde el tercer archivo original, sin nuevas escenas:
-docs/media/portada-124865.mp4, H.264/AAC, 480 × 854, 24 fps, 22.38 segundos.
-El video pesa 1,431,734 bytes e incluye fast start para empezar a reproducirse
-antes de descargarlo por completo. Conserva la pista de audio original
-recodificada; el visitante decide cuándo activarla.
+La foto recibida como 02-130966.png se convirtió a WebP sin recortar:
+- docs/media/portada-fiesta-1536.webp: 1536 × 1152, 319,622 bytes.
+- docs/media/portada-fiesta-768.webp: 768 × 576, 131,462 bytes.
 
-El poster docs/media/portada-124865.webp es un fotograma del mismo video.
-El original de 86 MB no se duplica en el repositorio.
+El diseño se construye con HTML y CSS; las capturas de referencia no se usan
+como sustituto de la página. El logo, textos, enlaces y tarjetas siguen siendo
+elementos independientes, accesibles y adaptables.
+
+El clip docs/media/portada-124865.mp4 (H.264/AAC, 480 × 854, 22.38 segundos,
+1,431,734 bytes) y su poster permanecen en la galería. El original de 86 MB
+no se duplica en el repositorio.
 
 ## Publicación y conservación de materiales
 
