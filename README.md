@@ -7,7 +7,7 @@ Cuenta y repositorio: sinteriaproducciones / sinteria-producciones.
 El punto final del nombre del repositorio es intencional.
 WhatsApp: 952391268. RUC: 10742038551. Perteneciente a Sinteria Group.
 
-## Actualización de la página pública · 20 de octubre de 2026
+## Actualización de la página pública · 21 de octubre de 2026
 
 La portada usa la segunda imagen entregada por el propietario el 20 de octubre:
 un grupo de invitados con los dos personajes de pelo rubio y el logo Sinteria.
@@ -16,12 +16,20 @@ composiciones irreales de las referencias. Se entrega en WebP de 1536 y 768 px
 según la pantalla. En teléfono, la foto se muestra completa y el texto aparece
 debajo; en PC, el texto se superpone con un degradado para facilitar su lectura.
 
-El diseño sigue las referencias de fiesta del propietario: cabecera oscura,
-acentos neón fucsia y violeta, botones luminosos, tarjetas de servicios con
-fotos y una sección de planes en contraste. La navegación abre páginas HTML
-independientes: Inicio, Servicios, Catálogos, Galería, Nosotros, Contacto,
-Condiciones y Privacidad. Cada ruta tiene su dirección, título, descripción y
-URL canónica y funciona al abrirla o recargarla directamente.
+El estilo neón se aplica a las ocho páginas y a todas sus secciones: fondos
+violeta con luces fucsia/cian, tarjetas oscuras con bordes luminosos y texto
+claro. La portada aprobada mantiene su foto, encuadre, textos y disposición.
+Cada página interna incorpora una cabecera con foto de los materiales
+existentes. Las cuatro tarjetas de servicios y las cuatro opciones de
+celebración incluyen imágenes; también las secciones de reserva, nosotros,
+contacto y preguntas frecuentes. El formulario, los filtros, los visores de
+fotos/videos, las condiciones y la privacidad comparten el mismo acabado.
+No se generan fotos nuevas ni se usan las capturas de pantalla como contenido.
+
+La navegación conserva las páginas HTML independientes: Inicio, Servicios,
+Catálogos, Galería, Nosotros, Contacto, Condiciones y Privacidad. Cada ruta
+tiene su dirección, título, descripción y URL canónica y funciona al abrirla
+o recargarla directamente.
 
 Se conservan las nueve fotos y diez videos anteriores, las fotos de los
 catálogos, redes oficiales y tarifas S/180, S/280 y S/380. La foto nueva también
@@ -49,7 +57,8 @@ y el diseño. No contratar servicios de pago.
 ## Archivos y compilación pública
 
 La interfaz publicada se encuentra en app/public-pages.tsx y
-app/public-pages.css, con el tema en app/party-theme.css. Las funciones de condiciones, privacidad y visor de
+app/public-pages.css, con la portada en app/party-theme.css y el acabado
+global en app/neon-world.css. Las funciones de condiciones, privacidad y visor de
 app/public-site.tsx se reutilizan sin cambiar las condiciones acordadas.
 
 public-page/snapshot.json conserva los datos de negocio y los materiales
@@ -67,7 +76,8 @@ Las dependencias mínimas y sus versiones están en public-build. Para compilar:
 5. Ejecutar python3 scripts/check-public-pages.py; requiere ffprobe.
 
 El script de verificación comprueba rutas, enlaces, recursos, metadatos, campos
-del formulario, precios, RUC, WhatsApp, fotos de portada y ausencia del panel.
+del formulario, precios, RUC, WhatsApp, fotos de portada, fotos de cada página, acabado neón
+global y ausencia del panel.
 
 ## Foto de portada y video conservado
 

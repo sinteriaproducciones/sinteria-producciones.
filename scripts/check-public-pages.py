@@ -24,10 +24,23 @@ class Page(HTMLParser):
         self.in_state = False
         self.videos = []
         self.cover = None
+        self.intro_photo = False
+        self.neon = False
+        self.detail_photos = 0
+        self.occasion_photos = 0
         self.required_fields = []
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
+        classes = a.get('class', '').split()
+        if a.get('data-theme') == 'neon':
+            self.neon = True
+        if 'sp-intro-photo' in classes:
+            self.intro_photo = True
+        if 'sp-detail-photo' in classes:
+            self.detail_photos += 1
+        if 'sp-occasion-card' in classes:
+            self.occasion_photos += 1
         if a.get('id'):
             self.ids.append(a['id'])
         if tag == 'a' and a.get('href'):
@@ -74,6 +87,11 @@ for route in ROUTES:
     assert '<!--PUBLIC_' not in raw and '__PAGE_' not in raw, (route, 'unfilled placeholder')
     p = Page()
     p.feed(raw)
+    assert p.neon, (route, 'neon theme missing')
+    if route:
+        assert p.intro_photo, (route, 'inner page photo missing')
+    if route == 'servicios/':
+        assert p.detail_photos == 4 and p.occasion_photos == 4, 'service or celebration photos missing'
     assert p.h1 == 1, (route, 'one main heading')
     assert len(p.ids) == len(set(p.ids)), (route, 'duplicate element IDs')
     assert p.canonical == ORIGIN + BASE + route, (route, 'canonical URL')
@@ -137,4 +155,4 @@ for width in [1536, 768]:
     assert (image['width'], image['height']) == (width, width * 3 // 4), 'cover was cropped'
     assert photo.stat().st_size < 400_000, 'photo too heavy'
     photos.append({'width': width, 'height': image['height'], 'bytes': photo.stat().st_size})
-print(json.dumps({'passed': True, 'pages': len(ROUTES), 'media_and_script_paths_checked': len(resources), 'cover': photos, 'eager_videos': 0, 'catalog_prices': [180, 280, 380], 'admin': 'pending, absent from public build'}))
+print(json.dumps({'passed': True, 'pages': len(ROUTES), 'media_and_script_paths_checked': len(resources), 'cover': photos, 'neon_pages': len(ROUTES), 'inner_photo_headers': len(ROUTES) - 1, 'service_photos': 4, 'celebration_photos': 4, 'eager_videos': 0, 'catalog_prices': [180, 280, 380], 'admin': 'pending, absent from public build'}))
