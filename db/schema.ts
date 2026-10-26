@@ -27,3 +27,9 @@ export const assets = sqliteTable("media_assets", {
   uploadState: text("upload_state").notNull().default("ready"),
   durationSeconds: real("duration_seconds"),
 });
+
+export const reservations = sqliteTable("reservations", {
+  id: text("id").primaryKey(), payload: text("payload").notNull(),
+  createdAt: integer("created_at").notNull(), status: text("status").notNull().default("nueva"),
+  notes: text("notes").notNull().default(""),
+});

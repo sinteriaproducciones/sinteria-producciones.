@@ -3,7 +3,8 @@ import { randomBytes, pbkdf2Sync } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { handleSiteAPI } from '../lib/site-api.ts';
-import { defaultContent, validateContent, youtubeEmbed, whatsappLink } from '../lib/content.ts';
+import { defaultContent, validateContent, youtubeEmbed, whatsappLink, packagePrice, activePromotions } from '../lib/content.ts';
+import { initialContent } from '../lib/initial-content.ts';
 import { SITE_LIMITS } from '../lib/limits.ts';
 import { publicContentWithOrigin } from '../lib/public-content.ts';
 
@@ -14,7 +15,7 @@ let count = 0;
 const check = (value, description) => { assert.ok(value, description); count++; };
 try {
   const DB = await mf.getD1Database('DB'), BUCKET = await mf.getR2Bucket('BUCKET');
-  for (const migration of ['0000_majestic_dexter_bennett.sql', '0001_careless_charles_xavier.sql']) {
+  for (const migration of ['0000_majestic_dexter_bennett.sql', '0001_careless_charles_xavier.sql', '0002_overjoyed_phalanx.sql']) {
     const sql = await readFile(new URL('../drizzle/' + migration, import.meta.url), 'utf8');
     for (const statement of sql.split('--> statement-breakpoint')) await DB.prepare(statement.trim()).run();
   }
@@ -27,7 +28,7 @@ try {
   }
   let result = await call('/api/site');
   check(result.status === 200, 'Public catalog is available without admin login');
-  check((await result.json()).content.brand.whatsapp === '51952391268', 'Correct business WhatsApp');
+  check((await result.json()).content.brand.whatsapp === '51932280554', 'Correct business WhatsApp');
   result = await call('/api/site', {headers:{Origin:'https://public.sinteria.test'}});
   check(result.headers.get('access-control-allow-origin') === 'https://public.sinteria.test', 'the public frontend can read the public catalog');
   check(!result.headers.has('access-control-allow-credentials'), 'Public catalog does not share credentials');
@@ -159,6 +160,50 @@ try {
   check(afterFailure.count === beforeFailure.count, 'A failed upload releases its storage reservation');
   const tooManyCatalogs = structuredClone(state); tooManyCatalogs.packages = Array.from({length:SITE_LIMITS.catalogs+1},(_,i)=>({...state.packages[0],id:'catalog-'+i}));
   check((await saveContent(tooManyCatalogs)).status === 400, 'The catalog count limit is enforced by the server');
+  check(validateContent(initialContent), 'Existing public catalog, photos, videos and services form a valid seed');
+  state.services=structuredClone(initialContent.services);
+  state.texts={copy_example:'Texto administrado'};
+  state.images={intro_contacto:initialContent.brand.hero};
+  state.promotions=[{id:'promo-test',title:'Descuento de prueba',description:'Prueba aislada',kind:'percentage',amount:10,packageIds:[state.packages[0].id],startsOn:'',endsOn:'',published:true}];
+  check((await saveContent(state)).status===200, 'Services, promotions, copy and section images persist together');
+  check(packagePrice(state.packages[0],state)===189, 'Percentage promotion changes the public price correctly');
+  const fixed=structuredClone(state);fixed.promotions[0].kind='fixed';fixed.promotions[0].amount=25;
+  check(packagePrice(fixed.packages[0],fixed)===185, 'Fixed discount changes the price in soles');
+  fixed.promotions[0].amount=500;
+  check(packagePrice(fixed.packages[0],fixed)===0, 'A discount never creates a negative price');
+  const expired=structuredClone(state);expired.promotions[0].endsOn='2020-01-01';
+  check(activePromotions(expired).length===0, 'Expired promotions are not applied');
+  const future=structuredClone(state);future.promotions[0].startsOn='2099-01-01';
+  check(activePromotions(future).length===0, 'Scheduled promotions wait for their start date');
+  const invalidPromotion=structuredClone(state);invalidPromotion.promotions[0].amount=101;
+  check((await saveContent(invalidPromotion)).status===400, 'The server rejects percentages over 100');
+  invalidPromotion.promotions[0].amount=10;invalidPromotion.promotions[0].endsOn='2026-99-99';
+  check((await saveContent(invalidPromotion)).status===400, 'Invalid promotion dates are rejected without a server failure');
+  state.services[0].published=false;
+  state.promotions[0].published=false;
+  await saveContent(state);
+  const visibleData=await (await call('/api/site')).json();
+  check(visibleData.content.services.length===3 && visibleData.content.promotions.length===0, 'Hidden services and promotions are excluded from anonymous reads');
+  const adapted=publicContentWithOrigin({...state,services:[{...state.services[1],image:'/media/11111111-1111-4111-8111-111111111111'}],images:{intro_contacto:'/media/11111111-1111-4111-8111-111111111111'}},origin);
+  check(adapted.services[0].image.startsWith(origin+'/media/') && adapted.images.intro_contacto.startsWith(origin+'/media/'), 'R2 section and service images use the API origin on GitHub Pages');
+  check((await call('/api/reservations',{method:'OPTIONS',originHeader:env.PUBLIC_SITE_ORIGIN})).status===204, 'Public reservation preflight permits the existing GitHub website');
+  check((await call('/api/reservations',{method:'OPTIONS',originHeader:'https://attacker.test'})).status===403, 'Reservation preflight rejects unrelated sites');
+  const reservation={requestId:crypto.randomUUID(),name:'Prueba aislada',phone:'999111222',district:'Distrito de prueba',event:'Cumpleaños',date:'2099-07-30',time:'18:00',packageId:state.packages[0].id,guests:'50',message:'Prueba local',accepted:true,website:''};
+  result=await call('/api/reservations',{method:'POST',originHeader:env.PUBLIC_SITE_ORIGIN,data:reservation});
+  check(result.status===201 && result.headers.get('access-control-allow-origin')===env.PUBLIC_SITE_ORIGIN, 'A visitor can submit a reservation from GitHub Pages');
+  check((await call('/api/reservations',{method:'POST',originHeader:env.PUBLIC_SITE_ORIGIN,data:reservation})).status===200, 'Retrying the same submission does not duplicate it');
+  check((await call('/api/admin/reservations')).status===401, 'Reservation contact data is private');
+  check((await call('/api/admin/reservations/'+reservation.requestId,{method:'PATCH',data:{status:'confirmada',notes:''}})).status===401, 'Visitors cannot confirm reservations');
+  const reservations=await (await call('/api/admin/reservations',{cookie})).json();
+  check(reservations.reservations.length===1 && reservations.reservations[0].name===reservation.name, 'The administrator sees the persisted reservation');
+  check((await call('/api/admin/reservations/'+reservation.requestId,{method:'PATCH',cookie,data:{status:'contactada',notes:'Nota privada'}})).status===200, 'Admin updates the reservation status and private notes');
+  check((await (await call('/api/admin/reservations',{cookie})).json()).reservations[0].notes==='Nota privada', 'Private reservation notes survive a new request');
+  check((await call('/api/reservations',{method:'POST',originHeader:env.PUBLIC_SITE_ORIGIN,data:{...reservation,requestId:crypto.randomUUID(),accepted:false}})).status===400, 'A reservation requires explicit consent');
+  check((await call('/api/reservations',{method:'POST',originHeader:env.PUBLIC_SITE_ORIGIN,data:{...reservation,requestId:crypto.randomUUID(),date:'2020-01-01'}})).status===400, 'Past event dates are rejected server-side');
+  check((await call('/api/reservations',{method:'POST',originHeader:env.PUBLIC_SITE_ORIGIN,data:{...reservation,requestId:crypto.randomUUID(),website:'spam'}})).status===400, 'The reservation honeypot rejects bot form submissions');
+  check((await call('/api/reservations',{method:'POST',originHeader:'https://attacker.test',data:reservation})).status===403, 'Cross-site reservation submissions are rejected');
+  check((await call('/api/admin/reservations/'+reservation.requestId,{method:'DELETE',cookie})).status===200, 'Admin can remove a reservation and its contact data');
+  check((await (await call('/api/admin/reservations',{cookie})).json()).reservations.length===0, 'Deleted reservation data is no longer returned');
   check((await call('/api/admin/logout',{method:'POST',cookie})).status === 200, 'Admin logout works');
   check((await call('/api/admin/content',{cookie})).status === 401, 'Revoked cookie cannot be reused');
   for (let i=0;i<10;i++) await call('/api/admin/login',{method:'POST',data:{email:env.ADMIN_EMAIL,password:'bad'}});

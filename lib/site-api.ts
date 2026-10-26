@@ -1,4 +1,5 @@
-import { defaultContent, referencedMedia, validateContent, type SiteContent } from "./content.ts";
+import { initialContent } from "./initial-content.ts";
+import { referencedMedia, validateContent, type SiteContent } from "./content.ts";
 import { SITE_LIMITS } from "./limits.ts";
 import { videoDuration } from "./video-duration.ts";
 
@@ -48,11 +49,21 @@ async function authorized(request: Request, db: D1Database) {
 
 export async function readContent(db: D1Database): Promise<{ content: SiteContent; revision: number }> {
   const row = await db.prepare("SELECT payload, revision FROM site_content WHERE key = ?").bind("main").first<{ payload: string; revision: number }>();
-  return { content: row ? JSON.parse(row.payload) : defaultContent, revision: row?.revision || 0 };
+  let content: SiteContent = row ? JSON.parse(row.payload) : initialContent;
+  if (row && content.services === undefined) {
+    const extras = initialContent.gallery.filter(m => ["portada-fiesta", "portada-124865"].includes(m.id) && !content.gallery.some(x => x.id === m.id));
+    content = {...content, brand:{...content.brand,
+      hero:content.brand.hero === "/assets/fiesta-hero.png" ? initialContent.brand.hero : content.brand.hero,
+      heroIsConcept:content.brand.hero === "/assets/fiesta-hero.png" ? false : content.brand.heroIsConcept,
+      email:content.brand.email === "sinteria.produciones@gmail.com" ? initialContent.brand.email : content.brand.email,
+      whatsapp:content.brand.whatsapp === "51952391268" ? initialContent.brand.whatsapp : content.brand.whatsapp},
+      gallery:[...extras,...content.gallery],services:initialContent.services,promotions:content.promotions || [],texts:content.texts || {},images:content.images || {}};
+  }
+  return { content, revision: row?.revision || 0 };
 }
 
 function published(content: SiteContent) {
-  return { ...content, packages: content.packages.filter(p => p.published), gallery: content.gallery.filter(m => m.published) };
+  return { ...content, packages: content.packages.filter(p => p.published), gallery: content.gallery.filter(m => m.published), services: content.services?.filter(s => s.published), promotions: content.promotions?.filter(p => p.published) };
 }
 
 async function isPublishedAsset(db: D1Database, id: string) {
@@ -76,6 +87,39 @@ export async function handleSiteAPI(request: Request, env: SiteEnv): Promise<Res
   const db = env.DB;
   if (!db) return json({ error: "El almacenamiento no está disponible. Intenta nuevamente." }, 503);
   try {
+    const publicOrigin = env.PUBLIC_SITE_ORIGIN;
+    const allowedPublic = request.headers.get("origin") === publicOrigin || request.headers.get("origin") === url.origin;
+    const publicHeaders: Record<string, string> = { "Vary": "Origin" };
+    if (allowedPublic) publicHeaders["Access-Control-Allow-Origin"] = request.headers.get("origin")!;
+    if (request.method === "OPTIONS" && url.pathname === "/api/reservations") {
+      if (!allowedPublic) return json({error: "Origen no permitido."}, 403);
+      return new Response(null, {status: 204, headers: {...publicHeaders, "Access-Control-Allow-Methods": "POST", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "600"}});
+    }
+    if (request.method === "POST" && url.pathname === "/api/reservations") {
+      if (!allowedPublic) return json({error: "Origen no permitido."}, 403);
+      const answer = (data: unknown, status = 200) => json(data, status, publicHeaders);
+      if (Number(request.headers.get("content-length") || 0) > 10000) return answer({error: "Solicitud demasiado grande."}, 413);
+      const raw = await request.text();
+      if (raw.length > 10000) return answer({error: "Solicitud demasiado grande."}, 413);
+      let b;
+      try {b = JSON.parse(raw);} catch {return answer({error: "Revisa los datos del formulario."}, 400);}
+      const str = (v: unknown, max: number, min = 1) => typeof v === "string" && v.trim().length >= min && v.length <= max;
+      if (!b || typeof b !== "object" || Array.isArray(b)) return answer({error:"Revisa los datos del formulario."},400);
+      if (b.website) return answer({error: "No se pudo registrar la solicitud."}, 400);
+      if (!/^[a-f0-9-]{36}$/.test(b.requestId || "") || !str(b.name,80) || !/^\+?[0-9 ()-]{7,22}$/.test(b.phone || "") || !str(b.district,120) || !str(b.event,80) || !str(b.date,10) || !/^\d{4}-\d{2}-\d{2}$/.test(b.date) || !/^\d{2}:\d{2}$/.test(b.time || "") || !Number.isFinite(Date.parse(`${b.date}T${b.time}:00-05:00`)) || Date.parse(`${b.date}T${b.time}:00-05:00`) <= Date.now() || !str(b.message,1000,0) || b.accepted !== true || !str(b.packageId,80,0) || !str(b.guests,6,0) || b.guests && !/^[1-9]\d{0,5}$/.test(b.guests)) return answer({error: "Completa tus datos, acepta las condiciones y elige una fecha futura."},400);
+      const existing = await db.prepare("SELECT id FROM reservations WHERE id = ?").bind(b.requestId).first();
+      if (existing) return answer({ok:true,id:b.requestId});
+      const key = await digest(`reservation:${request.headers.get("cf-connecting-ip") || "shared"}`), now=Date.now();
+      await db.prepare("INSERT INTO login_attempts (key,count,window_start) VALUES (?,1,?) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN window_start < ? THEN 1 ELSE count+1 END, window_start=CASE WHEN window_start < ? THEN excluded.window_start ELSE window_start END").bind(key,now,now-900000,now-900000).run();
+      const attempts = await db.prepare("SELECT count FROM login_attempts WHERE key=?").bind(key).first<{count:number}>();
+      if ((attempts?.count || 0) > 5) return answer({error: "Espera 15 minutos antes de enviar otra solicitud o escríbenos por WhatsApp."},429);
+      const state=await readContent(db), chosen=state.content.packages.find(p=>p.id===b.packageId && p.published);
+      if (b.packageId && !chosen) return answer({error: "El plan ya no está disponible. Actualiza la página."},400);
+      const payload = {name:b.name.trim(),phone:b.phone.trim(),event:b.event.trim(),district:b.district.trim(),date:b.date,time:b.time,packageId:b.packageId,packageName:chosen?.name || "Propuesta personalizada",guests:b.guests,message:b.message.trim(),accepted:true,consentAt:new Date(now).toISOString()};
+      const result=await db.prepare("INSERT OR IGNORE INTO reservations (id,payload,created_at,status,notes) SELECT ?,?,?,'nueva','' WHERE (SELECT COUNT(*) FROM reservations)<3000").bind(b.requestId,JSON.stringify(payload),now).run();
+      if (!result.meta.changes) return answer({error: "No pudimos registrar tu consulta. Escríbenos por WhatsApp."},503);
+      return answer({ok:true,id:b.requestId},201);
+    }
     if (request.method === "GET" && url.pathname === "/api/site") {
       const state = await readContent(db);
       const publicOrigin = env.PUBLIC_SITE_ORIGIN;
@@ -125,6 +169,7 @@ export async function handleSiteAPI(request: Request, env: SiteEnv): Promise<Res
       const raw = await request.text();
       if (raw.length > 3000) return json({ error: "Solicitud demasiado grande." }, 413);
       const body = JSON.parse(raw);
+      if (!body || typeof body !== "object" || Array.isArray(body)) return json({error:"Solicitud inválida."},400);
       const emailOK = typeof body.email === "string" && body.email.trim().toLowerCase() === env.ADMIN_EMAIL.toLowerCase();
       const passwordOK = typeof body.password === "string" && body.password.length <= 256 && await verifyPassword(body.password, env.ADMIN_PASSWORD_HASH);
       if (!emailOK || !passwordOK) return json({ error: "Correo o contraseña incorrectos." }, 401);
@@ -142,20 +187,35 @@ export async function handleSiteAPI(request: Request, env: SiteEnv): Promise<Res
       if (token) await db.prepare("DELETE FROM admin_sessions WHERE token_hash = ?").bind(await digest(token)).run();
       return json({ ok: true }, 200, { "Set-Cookie": `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` });
     }
+    if (request.method === "GET" && url.pathname === "/api/admin/reservations") {
+      const rows = await db.prepare("SELECT * FROM reservations ORDER BY created_at DESC LIMIT 500").all<{id:string;payload:string;created_at:number;status:string;notes:string}>();
+      return json({reservations:rows.results.map(r=>({...r,...JSON.parse(r.payload),payload:undefined}))});
+    }
+    if (url.pathname.startsWith("/api/admin/reservations/") && ["PATCH", "DELETE"].includes(request.method)) {
+      const id=url.pathname.split("/").pop()!;
+      if (!/^[a-f0-9-]{36}$/.test(id)) return json({error:"Solicitud no encontrada."},404);
+      if (request.method==="DELETE") {await db.prepare("DELETE FROM reservations WHERE id=?").bind(id).run();return json({ok:true});}
+      const raw=await request.text(); if(raw.length>4000)return json({error:"Notas demasiado largas."},413);
+      const b=JSON.parse(raw);
+      if(!["nueva","contactada","confirmada","cancelada"].includes(b.status) || typeof b.notes!=="string" || b.notes.length>2000)return json({error:"Datos de solicitud inválidos."},400);
+      await db.prepare("UPDATE reservations SET status=?,notes=? WHERE id=?").bind(b.status,b.notes,id).run();return json({ok:true});
+    }
     if (request.method === "GET" && url.pathname === "/api/admin/content") return json(await readContent(db));
     if (request.method === "PUT" && url.pathname === "/api/admin/content") {
       const raw = await request.text();
       if (raw.length > 300000) return json({ error: "El contenido supera el tamaño permitido." }, 413);
       const state = JSON.parse(raw);
-      if (!Number.isInteger(state.revision) || state.revision < 0 || !validateContent(state.content)) return json({ error: "Revisa los campos: precios, enlaces y datos de contacto deben ser válidos." }, 400);
+      if (!state || !Number.isInteger(state.revision) || state.revision < 0 || !validateContent(state.content)) return json({ error: "Revisa los campos: precios, enlaces y datos de contacto deben ser válidos." }, 400);
       const c = state.content as SiteContent;
       const previous = await readContent(db);
       const grows = c.packages.length > previous.content.packages.length ? 1 : 0;
       const managedRefs = new Set(referencedMedia(c).filter(u => u.startsWith("/media/")).map(u => u.slice(7)));
       for (const id of managedRefs) if (!await db.prepare("SELECT id FROM media_assets WHERE id = ? AND upload_state = 'ready'").bind(id).first()) return json({ error: "Un archivo no está disponible. Espera a que termine de subir o súbelo nuevamente." }, 400);
+      const refs = JSON.stringify([...managedRefs]);
+      const readyGuard = " AND NOT EXISTS (SELECT 1 FROM json_each(?) ref WHERE NOT EXISTS (SELECT 1 FROM media_assets asset WHERE asset.id = ref.value AND asset.upload_state = 'ready'))";
       const result = state.revision === 0
-        ? await db.prepare("INSERT OR IGNORE INTO site_content (key, payload, revision, updated_at) SELECT ?, ?, 1, ? WHERE ? = 0 OR (SELECT COALESCE(SUM(size), 0) FROM media_assets) < ?").bind("main", JSON.stringify(c), Date.now(), grows, SITE_LIMITS.uploadStopBytes).run()
-        : await db.prepare("UPDATE site_content SET payload = ?, revision = revision + 1, updated_at = ? WHERE key = ? AND revision = ? AND (? = 0 OR (SELECT COALESCE(SUM(size), 0) FROM media_assets) < ?)").bind(JSON.stringify(c), Date.now(), "main", state.revision, grows, SITE_LIMITS.uploadStopBytes).run();
+        ? await db.prepare("INSERT OR IGNORE INTO site_content (key, payload, revision, updated_at) SELECT ?, ?, 1, ? WHERE (? = 0 OR (SELECT COALESCE(SUM(size), 0) FROM media_assets) < ?)" + readyGuard).bind("main", JSON.stringify(c), Date.now(), grows, SITE_LIMITS.uploadStopBytes, refs).run()
+        : await db.prepare("UPDATE site_content SET payload = ?, revision = revision + 1, updated_at = ? WHERE key = ? AND revision = ? AND (? = 0 OR (SELECT COALESCE(SUM(size), 0) FROM media_assets) < ?)" + readyGuard).bind(JSON.stringify(c), Date.now(), "main", state.revision, grows, SITE_LIMITS.uploadStopBytes, refs).run();
       if (!result.meta.changes) {
         const usage = await db.prepare("SELECT COALESCE(SUM(size), 0) AS total FROM media_assets").first<{total: number}>();
         if (grows && (usage?.total || 0) >= SITE_LIMITS.uploadStopBytes) return json({ error: "Llegaste al tope preventivo de 225 MB. Libera archivos sin uso antes de añadir otro catálogo. Puedes seguir editando lo existente." }, 413);
@@ -201,8 +261,15 @@ export async function handleSiteAPI(request: Request, env: SiteEnv): Promise<Res
       const asset = await db.prepare("SELECT upload_state, created_at FROM media_assets WHERE id = ?").bind(id).first<{upload_state: string; created_at: number}>();
       if (asset?.upload_state === "uploading" && asset.created_at > Date.now() - 300000) return json({ error: "Este archivo todavía se está subiendo. Intenta nuevamente en unos minutos." }, 409);
       if (!env.BUCKET) return json({ error: "Los archivos no están disponibles. No se ha eliminado nada." }, 503);
-      await env.BUCKET.delete(id);
-      await db.prepare("DELETE FROM media_assets WHERE id = ?").bind(id).run();
+      const locked = await db.prepare("UPDATE media_assets SET upload_state = 'deleting' WHERE id = ? AND (upload_state = 'ready' OR created_at < ?) AND NOT EXISTS (SELECT 1 FROM site_content WHERE instr(payload, ?) > 0)").bind(id,Date.now()-300000,`/media/${id}`).run();
+      if (!locked.meta.changes) return json({error:"El archivo está en uso o ya fue retirado. Actualiza la lista."},409);
+      try {
+        await env.BUCKET.delete(id);
+        await db.prepare("DELETE FROM media_assets WHERE id = ? AND upload_state = 'deleting'").bind(id).run();
+      } catch (error) {
+        await db.prepare("UPDATE media_assets SET upload_state = 'ready' WHERE id = ? AND upload_state = 'deleting'").bind(id).run();
+        throw error;
+      }
       return json({ ok: true });
     }
     return json({ error: "Ruta no disponible." }, 404);

@@ -15,6 +15,13 @@
       "when": 1791499234619,
       "tag": "0001_careless_charles_xavier",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792982413129,
+      "tag": "0002_overjoyed_phalanx",
+      "breakpoints": true
     }
   ]
 }

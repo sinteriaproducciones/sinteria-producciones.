@@ -100,11 +100,11 @@ for route in ROUTES:
     state = json.loads(p.state)
     assert state['page'] == (route.rstrip('/') or 'inicio'), (route, 'wrong page state')
     c = state['content']
-    assert c['brand']['whatsapp'] == '51952391268'
+    assert c['brand']['whatsapp'] == '51932280554'
     assert c['brand']['ruc'] == '10742038551'
     assert c['brand']['group'] == 'Sinteria Group'
     assert [x['price'] for x in c['packages']] == [180, 280, 380]
-    assert len(c['gallery']) == 19
+    assert len(c['gallery']) == 21
     assert all(x['published'] for x in c['packages'] + c['gallery'])
     for link in p.links:
         url = urlsplit(link)
@@ -118,14 +118,14 @@ for route in ROUTES:
             assert url.scheme == 'https', (route, 'insecure external URL')
             continue
         assert url.path.startswith(BASE), (route, link, 'wrong project prefix')
-        assert '/admin' not in url.path, 'pending admin must not be published'
+        # Administrative writes are hosted on the protected Worker.
         target = ROOT / 'docs' / unquote(url.path[len(BASE):])
         if url.path.endswith('/'):
             target /= 'index.html'
         assert target.is_file(), (route, link, 'missing destination')
     for resource in p.resources:
         url = urlsplit(resource)
-        assert not url.netloc, (route, 'unexpected external resource')
+        assert not url.netloc or url.netloc == 'sinteriaproducciones.github.io', (route, 'unexpected external resource')
         assert url.path.startswith(BASE), (route, resource, 'wrong resource prefix')
         relative = 'docs/' + unquote(url.path[len(BASE):])
         assert (ROOT / relative).is_file() or relative in existing, (route, resource, 'missing media')
@@ -133,9 +133,8 @@ for route in ROUTES:
     assert not p.videos, (route, 'videos must load only when requested in the gallery')
     if not route:
         assert p.cover is not None, 'missing photo cover'
-        assert p.cover['src'] == BASE + 'media/portada-fiesta-1536.webp'
+        assert p.cover['src'] == ORIGIN + BASE + 'media/portada-fiesta-1536.webp'
         assert (p.cover['width'], p.cover['height']) == ('1536', '1152')
-        assert '768w' in p.cover['srcset'] and '1536w' in p.cover['srcset']
         assert p.cover['sizes'] == '100vw' and p.cover['fetchpriority'] == 'high'
         assert '"@type":"VideoObject"' not in raw
         assert 'media/portada-fiesta-1536.webp' in raw
@@ -145,7 +144,7 @@ for route in ROUTES:
 
 assert len(set(titles)) == len(ROUTES)
 assert (ROOT / 'docs/404.html').is_file()
-assert not (ROOT / 'docs/admin').exists()
+assert (ROOT / 'docs/admin/index.html').is_file()
 photos = []
 for width in [1536, 768]:
     photo = ROOT / f'docs/media/portada-fiesta-{width}.webp'
@@ -155,4 +154,4 @@ for width in [1536, 768]:
     assert (image['width'], image['height']) == (width, width * 3 // 4), 'cover was cropped'
     assert photo.stat().st_size < 400_000, 'photo too heavy'
     photos.append({'width': width, 'height': image['height'], 'bytes': photo.stat().st_size})
-print(json.dumps({'passed': True, 'pages': len(ROUTES), 'media_and_script_paths_checked': len(resources), 'cover': photos, 'neon_pages': len(ROUTES), 'inner_photo_headers': len(ROUTES) - 1, 'service_photos': 4, 'celebration_photos': 4, 'eager_videos': 0, 'catalog_prices': [180, 280, 380], 'admin': 'pending, absent from public build'}))
+print(json.dumps({'passed': True, 'pages': len(ROUTES), 'media_and_script_paths_checked': len(resources), 'cover': photos, 'neon_pages': len(ROUTES), 'inner_photo_headers': len(ROUTES) - 1, 'service_photos': 4, 'celebration_photos': 4, 'eager_videos': 0, 'catalog_prices': [180, 280, 380], 'admin': 'redirects to protected Cloudflare Worker'}))

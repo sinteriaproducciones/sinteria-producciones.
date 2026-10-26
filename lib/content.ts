@@ -15,7 +15,19 @@ export type SiteContent = {
     email: string; ruc: string; group: string; coverage: string; hero: string; heroIsConcept: boolean };
   socials: { facebook: string; tiktok: string; instagram: string };
   packages: Package[]; gallery: Media[];
+  services?: Service[]; promotions?: Promotion[];
+  texts?: Record<string, string>; images?: Record<string, string>;
 };
+export type Service = { id: string; name: string; text: string; detail: string; image: string; color: string; published: boolean; price: number | null };
+export type Promotion = { id: string; title: string; description: string; kind: "percentage" | "fixed"; amount: number; packageIds: string[]; startsOn: string; endsOn: string; published: boolean };
+
+export function activePromotions(content: SiteContent, today = limaToday()) {
+  return (content.promotions || []).filter(p => p.published && (!p.startsOn || p.startsOn <= today) && (!p.endsOn || p.endsOn >= today));
+}
+export function packagePrice(p: Package, content: SiteContent) {
+  if (p.price === null) return null;
+  return activePromotions(content).filter(x => !x.packageIds.length || x.packageIds.includes(p.id)).reduce((best, x) => Math.min(best, Math.max(0, Math.round((x.kind === "percentage" ? p.price! * (1 - x.amount / 100) : p.price! - x.amount) * 100) / 100)), p.price);
+}
 
 export const defaultContent: SiteContent = {
   brand: {
@@ -103,11 +115,34 @@ export function validateContent(input: unknown): input is SiteContent {
       m.isConcept !== undefined && typeof m.isConcept !== "boolean") return false;
     ids.add(m.id);
   }
+  for (const map of [v.texts, v.images]) {
+    if (map !== undefined && (!map || typeof map !== "object" || Array.isArray(map) || Object.keys(map).length > 300 || !Object.entries(map).every(([key, val]) => /^[a-zA-Z0-9_.-]{1,100}$/.test(key) && str(val, 12000)))) return false;
+  }
+  if (v.images && !Object.values(v.images).every(safeMediaURL)) return false;
+  if (v.services !== undefined) {
+    if (!Array.isArray(v.services) || v.services.length > 60) return false;
+    ids.clear();
+    for (const s of v.services) {
+      if (!s || !str(s.id, 80, 1) || ids.has(s.id) || !str(s.name, 100, 1) || !str(s.text, 1500, 1) || !str(s.detail, 1500) || !safeMediaURL(s.image) || !["pink", "purple", "yellow", "teal"].includes(s.color) || typeof s.published !== "boolean" || !(s.price === null || typeof s.price === "number" && Number.isFinite(s.price) && s.price >= 0 && s.price <= 1000000)) return false;
+      ids.add(s.id);
+    }
+  }
+  if (v.promotions !== undefined) {
+    if (!Array.isArray(v.promotions) || v.promotions.length > 60) return false;
+    ids.clear();
+    const validDate = (d: string) => d === "" || /^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isFinite(Date.parse(d + "T00:00:00Z")) && new Date(d + "T00:00:00Z").toISOString().slice(0, 10) === d;
+    for (const p of v.promotions) {
+      if (!p || !str(p.id, 80, 1) || ids.has(p.id) || !str(p.title, 120, 1) || !str(p.description, 1000) || !["percentage", "fixed"].includes(p.kind) || !Number.isFinite(p.amount) || p.amount <= 0 || p.amount > (p.kind === "percentage" ? 100 : 1000000) || !Array.isArray(p.packageIds) || !p.packageIds.every(id => v.packages.some(item => item.id === id)) || !validDate(p.startsOn) || !validDate(p.endsOn) || p.startsOn && p.endsOn && p.startsOn > p.endsOn || typeof p.published !== "boolean") return false;
+      ids.add(p.id);
+    }
+  }
   return true;
 }
 
 export function referencedMedia(content: SiteContent, publishedOnly = false): string[] {
   return [content.brand.hero,
+    ...Object.values(content.images || {}),
+    ...(content.services || []).filter(s => !publishedOnly || s.published).map(s => s.image),
     ...content.packages.filter(p => !publishedOnly || p.published).flatMap(p => p.image ? [p.image] : []),
     ...content.gallery.filter(m => !publishedOnly || m.published).flatMap(m => m.poster ? [m.url, m.poster] : [m.url])];
 }
