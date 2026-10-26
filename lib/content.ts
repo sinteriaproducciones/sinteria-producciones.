@@ -109,7 +109,7 @@ export function validateContent(input: unknown): input is SiteContent {
   const validMedia=(items:Media[])=>{
     const ids=new Set<string>();
     for(const m of items){
-      if (!m || !str(m.id, 80, 1) || ids.has(m.id) || !str(m.title, 180, 1) || !str(m.category, 80, 1) ||
+      if (!m || !str(m.id, 80, 1) || !/^[a-zA-Z0-9_-]+$/.test(m.id) || ids.has(m.id) || !str(m.title, 180, 1) || !str(m.category, 80, 1) ||
         !["image", "video", "youtube"].includes(m.kind) || !safeMediaURL(m.url) ||
         m.kind === "youtube" && !youtubeEmbed(m.url) || typeof m.published !== "boolean" ||
         m.poster !== undefined && (!str(m.poster, 600, 1) || !safeMediaURL(m.poster)) ||

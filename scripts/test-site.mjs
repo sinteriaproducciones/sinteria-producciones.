@@ -165,6 +165,7 @@ try {
   const invalidHome=structuredClone(mediaState);invalidHome.homeMediaIds=['missing'];
   check((await saveContent(invalidHome)).status===400,'Missing homepage references are rejected');
   invalidHome.homeMediaIds=['first-photo','first-photo'];check(!validateContent(invalidHome),'Repeated homepage IDs are rejected');
+  const unsafeId=structuredClone(mediaState);unsafeId.gallery[0].id='..';unsafeId.homeMediaIds=[];check(!validateContent(unsafeId),'Media IDs cannot escape public video directories');
   const invalidMixed=structuredClone(mediaState);invalidMixed.packages[0].media[1].id=invalidMixed.packages[0].media[0].id;
   check(!validateContent(invalidMixed),'Repeated IDs inside a catalog are rejected');
   invalidMixed.packages[0].media=Array.from({length:21},(_,i)=>({...mediaState.packages[0].media[0],id:'over-'+i}));

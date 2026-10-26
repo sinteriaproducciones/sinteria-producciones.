@@ -12,6 +12,7 @@ export default {
       const secured = new Response(result.body, result);
       secured.headers.set("Cache-Control", "private, no-store");
       secured.headers.set("X-Frame-Options", "DENY");
+      secured.headers.set("X-Robots-Tag", "noindex, nofollow");
       secured.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
       return secured;
     }

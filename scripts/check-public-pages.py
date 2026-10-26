@@ -1,5 +1,6 @@
 import json
 import subprocess
+import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlsplit, unquote
@@ -8,6 +9,8 @@ ROOT = Path(__file__).resolve().parent.parent
 BASE = '/sinteria-producciones./'
 ORIGIN = 'https://sinteriaproducciones.github.io'
 ROUTES = ['', 'servicios/', 'catalogo/', 'galeria/', 'nosotros/', 'contacto/', 'condiciones/', 'privacidad/']
+VIDEO_ROUTES = json.loads((ROOT / 'public-page/video-routes.json').read_text())
+ROUTES += ['videos/'] + ['videos/' + m['id'] + '/' for m in VIDEO_ROUTES]
 
 
 class Page(HTMLParser):
@@ -23,6 +26,10 @@ class Page(HTMLParser):
         self.state = ''
         self.in_state = False
         self.videos = []
+        self.structured = ''
+        self.in_structured = False
+        self.robots = None
+        self.description = None
         self.cover = None
         self.intro_photo = False
         self.neon = False
@@ -55,6 +62,12 @@ class Page(HTMLParser):
             self.resources.append(a['href'])
         if tag == 'link' and a.get('rel') == 'canonical':
             self.canonical = a['href']
+        if tag == 'meta' and a.get('name') == 'robots':
+            self.robots = a['content']
+        if tag == 'meta' and a.get('name') == 'description':
+            self.description = a['content']
+        if tag == 'script' and a.get('id') == 'structured-data':
+            self.in_structured = True
         if tag == 'h1':
             self.h1 += 1
         if tag == 'title':
@@ -69,26 +82,31 @@ class Page(HTMLParser):
             self.in_title = False
         if tag == 'script':
             self.in_state = False
+            self.in_structured = False
 
     def handle_data(self, data):
         if self.in_title:
             self.title += data
         if self.in_state:
             self.state += data
+        if self.in_structured:
+            self.structured += data
 
 
 legacy = ROOT / '.public-runtime/legacy-paths.json'
 existing = set(json.loads(legacy.read_text())) if legacy.exists() else set()
 titles = []
 resources = set()
+inline_videos = 0
 for route in ROUTES:
     path = ROOT / 'docs' / route / 'index.html'
     raw = path.read_text()
     assert '<!--PUBLIC_' not in raw and '__PAGE_' not in raw, (route, 'unfilled placeholder')
     p = Page()
     p.feed(raw)
+    inline_videos += len(p.videos)
     assert p.neon, (route, 'neon theme missing')
-    if route:
+    if route and not route.startswith('videos/'):
         assert p.intro_photo, (route, 'inner page photo missing')
     if route == 'servicios/':
         assert p.detail_photos == 4 and p.occasion_photos == 4, 'service or celebration photos missing'
@@ -98,7 +116,16 @@ for route in ROUTES:
     assert len(p.title) > 20
     titles.append(p.title)
     state = json.loads(p.state)
-    assert state['page'] == (route.rstrip('/') or 'inicio'), (route, 'wrong page state')
+    assert state['page'] == ('video' if route.startswith('videos/') else route.rstrip('/') or 'inicio'), (route, 'wrong page state')
+    structured = json.loads(p.structured)
+    assert structured['@context'] == 'https://schema.org'
+    assert p.description and len(p.description) > 35
+    assert ('noindex' in p.robots) == (route == 'videos/'), (route, 'incorrect indexing control')
+    assert any(x['@type'] == 'Organization' for x in structured['@graph'])
+    assert not any(key in x for x in structured['@graph'] for key in ['aggregateRating', 'review', 'address']), 'no invented business details'
+    if route.startswith('videos/') and route != 'videos/':
+        assert len(p.videos)==1 and 'controls' in p.videos[0], 'the watch page needs a prominent playable video'
+        assert state.get('videoId') == route.split('/')[1]
     c = state['content']
     assert c['brand']['whatsapp'] == '51932280554'
     assert c['brand']['ruc'] == '10742038551'
@@ -149,6 +176,19 @@ for route in ROUTES:
         assert set(['name', 'event', 'district', 'date', 'time', 'accepted']) <= set(p.required_fields)
 
 assert len(set(titles)) == len(ROUTES)
+sitemap=ET.parse(ROOT/'docs/sitemap.xml').getroot()
+ns={'s':'http://www.sitemaps.org/schemas/sitemap/0.9','v':'http://www.google.com/schemas/sitemap-video/1.1'}
+urls=[node.text for node in sitemap.findall('s:url/s:loc',ns)]
+assert set(urls)=={ORIGIN+BASE+r for r in ROUTES if r!='videos/'}
+video_sitemap=ET.parse(ROOT/'docs/video-sitemap.xml').getroot()
+entries=video_sitemap.findall('s:url',ns)
+assert len(entries)==len(VIDEO_ROUTES)
+for entry in entries:
+    assert entry.find('s:loc',ns).text in urls
+    video=entry.find('v:video',ns)
+    for key in ['thumbnail_loc','title','description','content_loc']:
+        assert video.find('v:'+key,ns) is not None and video.find('v:'+key,ns).text
+    assert video.find('v:publication_date',ns) is None, 'unknown publication dates must not be invented'
 assert (ROOT / 'docs/404.html').is_file()
 assert (ROOT / 'docs/admin/index.html').is_file()
 photos = []
@@ -160,4 +200,4 @@ for width in [1536, 768]:
     assert (image['width'], image['height']) == (width, width * 3 // 4), 'cover was cropped'
     assert photo.stat().st_size < 400_000, 'photo too heavy'
     photos.append({'width': width, 'height': image['height'], 'bytes': photo.stat().st_size})
-print(json.dumps({'passed': True, 'pages': len(ROUTES), 'media_and_script_paths_checked': len(resources), 'cover': photos, 'neon_pages': len(ROUTES), 'inner_photo_headers': len(ROUTES) - 1, 'service_photos': 4, 'celebration_photos': 4, 'eager_videos': 0, 'catalog_prices': [180, 280, 380], 'admin': 'redirects to protected Cloudflare Worker'}))
+print(json.dumps({'passed': True, 'pages': len(ROUTES), 'media_and_script_paths_checked': len(resources), 'cover': photos, 'neon_pages': len(ROUTES), 'watch_pages':len(VIDEO_ROUTES),'sitemap_urls':len(urls),'video_sitemap_entries':len(entries),'inner_photo_headers':7, 'service_photos': 4, 'celebration_photos': 4, 'inline_players':inline_videos, 'catalog_prices':[x['price'] for x in c['packages']], 'admin': 'redirects to protected Cloudflare Worker'}))
