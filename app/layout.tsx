@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import "./celebration.css";
 import "./stage-two.css";
+import "./admin-neon.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://sinteria-producciones.genrrytm16.chatgpt.site"),
