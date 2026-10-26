@@ -7,6 +7,14 @@ export default {
   async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
     const response = await handleSiteAPI(request, env);
     if (response) return response;
+    if (new URL(request.url).pathname.startsWith("/admin")) {
+      const result = await runWithConnectorBinding(undefined, () => handler.fetch(request, env, ctx));
+      const secured = new Response(result.body, result);
+      secured.headers.set("Cache-Control", "private, no-store");
+      secured.headers.set("X-Frame-Options", "DENY");
+      secured.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+      return secured;
+    }
     let binding = ctx.props?.CONNECTORS;
     // Local preview emulates the same request-scoped capability. This branch and
     // the auxiliary service binding are absent from production builds.
