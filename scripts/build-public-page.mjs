@@ -54,6 +54,9 @@ await writeFile(resolve(out, "404.html"), notFound);
 await writeFile(resolve(out, ".nojekyll"), "");
 await writeFile(resolve(out,"robots.txt"),"User-agent: *\nAllow: /\nSitemap: "+publicURL+"sitemap-index.xml\n");
 if (await stat(resolve(root, "public/favicon.svg")).catch(() => null)) await cp(resolve(root, "public/favicon.svg"), resolve(out, "favicon.svg"));
+const verificationFile = "google6e49e48c01da3c38.html";
+const verificationSource = resolve(root, "public", verificationFile);
+if (await stat(verificationSource).catch(() => null)) await cp(verificationSource, resolve(out, verificationFile));
 console.log(JSON.stringify({ directory: out, pages: routes.length, videoPages:videos.length, gallery: content.gallery.length, catalogs: content.packages.length,
   publicURL, heroPhoto: "portada-fiesta-1536.webp", admin: "https://sinteria-producciones.genrrytm16.chatgpt.site/admin", preservedExistingMedia: true }));
 
