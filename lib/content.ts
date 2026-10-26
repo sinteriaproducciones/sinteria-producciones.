@@ -3,7 +3,7 @@ import { CATALOG_TYPES, SITE_LIMITS } from "./limits.ts";
 export type Package = {
   id: string; name: string; subtitle: string; category: string; description: string;
   price: number | null; includes: string[]; featured: boolean; published: boolean;
-  format?: "plan" | "personaje" | "combo" | "show"; image?: string;
+  format?: "plan" | "personaje" | "combo" | "show"; image?: string; media?: Media[];
 };
 export type Media = {
   id: string; title: string; category: string; kind: "image" | "video" | "youtube";
@@ -14,7 +14,7 @@ export type SiteContent = {
   brand: { headline: string; highlight: string; description: string; whatsapp: string;
     email: string; ruc: string; group: string; coverage: string; hero: string; heroIsConcept: boolean };
   socials: { facebook: string; tiktok: string; instagram: string };
-  packages: Package[]; gallery: Media[];
+  packages: Package[]; gallery: Media[]; homeMediaIds?: string[];
   services?: Service[]; promotions?: Promotion[];
   texts?: Record<string, string>; images?: Record<string, string>;
 };
@@ -106,15 +106,21 @@ export function validateContent(input: unknown): input is SiteContent {
       p.image !== undefined && (!str(p.image, 600) || p.image !== "" && !safeMediaURL(p.image))) return false;
     ids.add(p.id);
   }
-  ids.clear();
-  for (const m of v.gallery) {
-    if (!m || !str(m.id, 80, 1) || ids.has(m.id) || !str(m.title, 180, 1) || !str(m.category, 80, 1) ||
-      !["image", "video", "youtube"].includes(m.kind) || !safeMediaURL(m.url) ||
-      m.kind === "youtube" && !youtubeEmbed(m.url) || typeof m.published !== "boolean" ||
-      m.poster !== undefined && (!str(m.poster, 600, 1) || !safeMediaURL(m.poster)) ||
-      m.isConcept !== undefined && typeof m.isConcept !== "boolean") return false;
-    ids.add(m.id);
-  }
+  const validMedia=(items:Media[])=>{
+    const ids=new Set<string>();
+    for(const m of items){
+      if (!m || !str(m.id, 80, 1) || ids.has(m.id) || !str(m.title, 180, 1) || !str(m.category, 80, 1) ||
+        !["image", "video", "youtube"].includes(m.kind) || !safeMediaURL(m.url) ||
+        m.kind === "youtube" && !youtubeEmbed(m.url) || typeof m.published !== "boolean" ||
+        m.poster !== undefined && (!str(m.poster, 600, 1) || !safeMediaURL(m.poster)) ||
+        m.isConcept !== undefined && typeof m.isConcept !== "boolean") return false;
+      ids.add(m.id);
+    }
+    return true;
+  };
+  if(!validMedia(v.gallery))return false;
+  for(const p of v.packages)if(p.media!==undefined&&(!Array.isArray(p.media)||p.media.length>SITE_LIMITS.catalogMedia||!validMedia(p.media)))return false;
+  if(v.homeMediaIds!==undefined&&(!Array.isArray(v.homeMediaIds)||v.homeMediaIds.length>SITE_LIMITS.galleryItems||new Set(v.homeMediaIds).size!==v.homeMediaIds.length||!v.homeMediaIds.every(id=>typeof id==="string"&&v.gallery.some(m=>m.id===id))))return false;
   for (const map of [v.texts, v.images]) {
     if (map !== undefined && (!map || typeof map !== "object" || Array.isArray(map) || Object.keys(map).length > 300 || !Object.entries(map).every(([key, val]) => /^[a-zA-Z0-9_.-]{1,100}$/.test(key) && str(val, 12000)))) return false;
   }
@@ -143,6 +149,6 @@ export function referencedMedia(content: SiteContent, publishedOnly = false): st
   return [content.brand.hero,
     ...Object.values(content.images || {}),
     ...(content.services || []).filter(s => !publishedOnly || s.published).map(s => s.image),
-    ...content.packages.filter(p => !publishedOnly || p.published).flatMap(p => p.image ? [p.image] : []),
+    ...content.packages.filter(p => !publishedOnly || p.published).flatMap(p => p.media!==undefined?p.media.filter(m=>!publishedOnly||m.published).flatMap(m=>m.poster?[m.url,m.poster]:[m.url]):p.image?[p.image]:[]),
     ...content.gallery.filter(m => !publishedOnly || m.published).flatMap(m => m.poster ? [m.url, m.poster] : [m.url])];
 }

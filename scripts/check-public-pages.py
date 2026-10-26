@@ -49,7 +49,7 @@ class Page(HTMLParser):
             self.resources.append(a['src'])
         if tag == 'video':
             self.videos.append(a)
-        if tag == 'img' and 'sp-cover-photo' in a.get('class', '').split():
+        if tag in ('img', 'video') and 'sp-cover-photo' in a.get('class', '').split():
             self.cover = a
         if tag == 'link' and a.get('rel') == 'stylesheet':
             self.resources.append(a['href'])
@@ -103,8 +103,9 @@ for route in ROUTES:
     assert c['brand']['whatsapp'] == '51932280554'
     assert c['brand']['ruc'] == '10742038551'
     assert c['brand']['group'] == 'Sinteria Group'
-    assert [x['price'] for x in c['packages']] == [180, 280, 380]
-    assert len(c['gallery']) == 21
+    assert len({x['id'] for x in c['packages']}) == len(c['packages'])
+    assert len({x['id'] for x in c['gallery']}) == len(c['gallery'])
+    assert all(m['published'] for x in c['packages'] for m in x.get('media', []))
     assert all(x['published'] for x in c['packages'] + c['gallery'])
     for link in p.links:
         url = urlsplit(link)
@@ -125,18 +126,23 @@ for route in ROUTES:
         assert target.is_file(), (route, link, 'missing destination')
     for resource in p.resources:
         url = urlsplit(resource)
-        assert not url.netloc or url.netloc == 'sinteriaproducciones.github.io', (route, 'unexpected external resource')
+        if url.netloc and url.netloc != 'sinteriaproducciones.github.io':
+            assert url.scheme == 'https', (route, 'insecure resource')
+            continue
         assert url.path.startswith(BASE), (route, resource, 'wrong resource prefix')
         relative = 'docs/' + unquote(url.path[len(BASE):])
         assert (ROOT / relative).is_file() or relative in existing, (route, resource, 'missing media')
         resources.add(relative)
-    assert not p.videos, (route, 'videos must load only when requested in the gallery')
+    assert all('playsinline' in video for video in p.videos), (route, 'videos must play inline on mobile')
     if not route:
         assert p.cover is not None, 'missing photo cover'
-        assert p.cover['src'] == ORIGIN + BASE + 'media/portada-fiesta-1536.webp'
+        selected = c.get('homeMediaIds', [m['id'] for m in c['gallery'] if m['kind'] == 'image'][:3])
+        first = next((m for id in selected for m in c['gallery'] if m['id'] == id), None)
+        expected = first['url'] if first and first['kind'] in ('image','video') else c['brand']['hero']
+        assert p.cover['src'] == expected, 'homepage cover must follow the chosen order'
         assert (p.cover['width'], p.cover['height']) == ('1536', '1152')
-        assert p.cover['sizes'] == '100vw' and p.cover['fetchpriority'] == 'high'
-        assert '"@type":"VideoObject"' not in raw
+        if first is None or first['kind']=='image':
+            assert p.cover['sizes'] == '100vw' and p.cover['fetchpriority'] == 'high'
         assert 'media/portada-fiesta-1536.webp' in raw
         assert raw.count('sp-service-cover') == 3, 'service photos missing'
     if route == 'contacto/':

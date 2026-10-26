@@ -3,6 +3,8 @@ import "./globals.css";
 import "./stage-two.css";
 import "./admin-neon.css";
 import "./video-editor.css";
+import "./media-manager.css";
+import "./public-media.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://sinteria-producciones.genrrytm16.chatgpt.site"),

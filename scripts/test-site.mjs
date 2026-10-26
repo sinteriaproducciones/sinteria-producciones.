@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { handleSiteAPI } from '../lib/site-api.ts';
 import { defaultContent, validateContent, youtubeEmbed, whatsappLink, packagePrice, activePromotions } from '../lib/content.ts';
 import { initialContent } from '../lib/initial-content.ts';
+import {moveMedia,homeMedia,normalizeMediaContent,catalogMedia} from '../lib/media-content.ts';
 import { SITE_LIMITS } from '../lib/limits.ts';
 import { publicContentWithOrigin } from '../lib/public-content.ts';
 
@@ -132,6 +133,50 @@ try {
   state.packages[0].published = false;
   await saveContent(state);
   check((await call(poster.url)).status === 404, 'Hidden catalog photos stay private');
+  const mediaState=structuredClone(state);
+  mediaState.services=[];
+  mediaState.packages[0].published=true;
+  mediaState.packages[0].media=[
+    {id:'catalog-photo',title:'Foto del catálogo',category:'Hora loca',kind:'image',url:poster.url,published:true},
+    {id:'catalog-video',title:'Video del catálogo',category:'Hora loca',kind:'video',url:clip.url,poster:poster.url,published:true},
+    {id:'catalog-hidden',title:'Borrador privado',category:'Hora loca',kind:'video',url:webm.url,published:false}
+  ];
+  mediaState.gallery=[
+    {id:'first-photo',title:'Primera foto',category:'Hora loca',kind:'image',url:poster.url,published:true},
+    {id:'second-video',title:'Segundo video',category:'Hora loca',kind:'video',url:clip.url,published:true},
+    {id:'third-video',title:'Tercer video oculto',category:'Hora loca',kind:'video',url:webm.url,published:false}
+  ];
+  mediaState.homeMediaIds=['second-video','first-photo','third-video'];
+  check((await saveContent(mediaState)).status===200,'Mixed photos and videos with an independent homepage order persist');
+  let mediaPublic=(await (await call('/api/site')).json()).content;
+  check(mediaPublic.homeMediaIds.join(',')==='second-video,first-photo','Only selected visible homepage media is returned, in the chosen order');
+  check(mediaPublic.packages[0].media.map(m=>m.id).join(',')==='catalog-photo,catalog-video','Multiple catalog files retain order and exclude drafts');
+  check((await call(webm.url)).status===404,'Unpublished catalog-only video is protected');
+  check((await call('/api/admin/assets/'+clip.id,{method:'DELETE',cookie})).status===409,'Video referenced inside a catalog cannot be deleted');
+  mediaState.gallery=moveMedia(mediaState.gallery,2,0);
+  mediaState.homeMediaIds=moveMedia(mediaState.homeMediaIds,1,0);
+  mediaState.packages[0].media=moveMedia(mediaState.packages[0].media,1,0);
+  check((await saveContent(mediaState)).status===200,'Gallery, homepage and catalog can each be reordered independently');
+  const afterReorder=(await (await call('/api/admin/content',{cookie})).json()).content;
+  check(afterReorder.gallery[0].id==='third-video'&&afterReorder.homeMediaIds[0]==='first-photo'&&afterReorder.packages[0].media[0].id==='catalog-video','Another admin read receives all three saved orders');
+  check((await (await call('/api/site')).json()).content.packages[0].image===poster.url,'Catalog video cover uses its real poster');
+  const noHome=structuredClone(mediaState);noHome.homeMediaIds=[];await saveContent(noHome);
+  check((await (await call('/api/site')).json()).content.homeMediaIds.length===0,'An explicit empty homepage stays empty after a fresh read');
+  const invalidHome=structuredClone(mediaState);invalidHome.homeMediaIds=['missing'];
+  check((await saveContent(invalidHome)).status===400,'Missing homepage references are rejected');
+  invalidHome.homeMediaIds=['first-photo','first-photo'];check(!validateContent(invalidHome),'Repeated homepage IDs are rejected');
+  const invalidMixed=structuredClone(mediaState);invalidMixed.packages[0].media[1].id=invalidMixed.packages[0].media[0].id;
+  check(!validateContent(invalidMixed),'Repeated IDs inside a catalog are rejected');
+  invalidMixed.packages[0].media=Array.from({length:21},(_,i)=>({...mediaState.packages[0].media[0],id:'over-'+i}));
+  check(!validateContent(invalidMixed),'The per-catalog attachment limit is enforced');
+  const nested=publicContentWithOrigin(mediaState,'https://sinteria.test');
+  check(nested.packages[0].media[0].url==='https://sinteria.test'+clip.url,'Public catalog video URLs resolve to the backend origin');
+  const legacy=normalizeMediaContent(state);
+  check(catalogMedia(legacy.packages[0])[0].url===poster.url,'The existing single catalog photo is recovered without losing it');
+  let permutations=['one','two','three'];for(let i=0;i<12;i++){permutations=moveMedia(permutations,2,0);permutations=moveMedia(permutations,0,2);}
+  check(permutations.join(',')==='one,two,three','Repeated first/last moves preserve every video without duplicates');
+  check(homeMedia({...mediaState,homeMediaIds:[]}).length===0,'Homepage selection never silently adds unselected files');
+  await saveContent(state);
   state.packages[0].published = true;
   const invalidCatalog = structuredClone(state); invalidCatalog.packages[0].image = 'javascript:alert(1)';
   check((await saveContent(invalidCatalog)).status === 400, 'Unsafe catalog photos are rejected');

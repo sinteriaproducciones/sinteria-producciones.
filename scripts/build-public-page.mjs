@@ -17,7 +17,9 @@ await build({
     rolldownOptions: { output: { entryFileNames: "render.mjs" } } },
 });
 const { renderPublicPage, pages, SITE_BASE, SITE_ORIGIN, initialContent } = await import(pathToFileURL(resolve(ssr, "render.mjs")).href);
-content=initialContent;
+try { content=JSON.parse(await readFile(resolve(root,".public-runtime/current-public.json"),"utf8")); }
+catch(error){if(error.code!=="ENOENT")throw error;content=initialContent;}
+if(content.packages.some(p=>!p.published||p.media?.some(m=>!m.published))||content.gallery.some(m=>!m.published))throw Error("Private content cannot be bundled.");
 await build({
   configFile: false, root: resolve(root, "public-page"), base: SITE_BASE, publicDir: false,
   plugins: [react()], css: { postcss: { plugins: [] } },

@@ -6,6 +6,7 @@ import { API_ORIGIN, publicContentWithOrigin } from "../lib/public-content.ts";
 import "../app/public-pages.css";
 import "../app/party-theme.css";
 import "../app/neon-world.css";
+import "../app/public-media.css";
 const saved = document.getElementById("public-state")?.textContent;
 const root = document.getElementById("root");
 if (!saved || !root) throw new Error("Missing public page content.");

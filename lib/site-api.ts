@@ -1,3 +1,4 @@
+import {normalizeMediaContent,catalogCover} from "./media-content.ts";
 import { initialContent } from "./initial-content.ts";
 import { referencedMedia, validateContent, type SiteContent } from "./content.ts";
 import { SITE_LIMITS } from "./limits.ts";
@@ -59,11 +60,11 @@ export async function readContent(db: D1Database): Promise<{ content: SiteConten
       whatsapp:content.brand.whatsapp === "51952391268" ? initialContent.brand.whatsapp : content.brand.whatsapp},
       gallery:[...extras,...content.gallery],services:initialContent.services,promotions:content.promotions || [],texts:content.texts || {},images:content.images || {}};
   }
-  return { content, revision: row?.revision || 0 };
+  return { content:normalizeMediaContent(content), revision: row?.revision || 0 };
 }
 
 function published(content: SiteContent) {
-  return { ...content, packages: content.packages.filter(p => p.published), gallery: content.gallery.filter(m => m.published), services: content.services?.filter(s => s.published), promotions: content.promotions?.filter(p => p.published) };
+  return { ...content, packages: content.packages.filter(p => p.published).map(p=>({...p,...(p.media!==undefined?{media:p.media.filter(m=>m.published),image:catalogCover(p.media)}:{})})), homeMediaIds: content.homeMediaIds?.filter(id=>content.gallery.some(m=>m.id===id&&m.published)), gallery: content.gallery.filter(m => m.published), services: content.services?.filter(s => s.published), promotions: content.promotions?.filter(p => p.published) };
 }
 
 async function isPublishedAsset(db: D1Database, id: string) {
@@ -203,14 +204,14 @@ export async function handleSiteAPI(request: Request, env: SiteEnv): Promise<Res
     if (request.method === "GET" && url.pathname === "/api/admin/content") return json(await readContent(db));
     if (request.method === "PUT" && url.pathname === "/api/admin/content") {
       const raw = await request.text();
-      if (raw.length > 300000) return json({ error: "El contenido supera el tamaño permitido." }, 413);
+      if (raw.length > 1000000) return json({ error: "El contenido supera el tamaño permitido." }, 413);
       const state = JSON.parse(raw);
       if (!state || !Number.isInteger(state.revision) || state.revision < 0 || !validateContent(state.content)) return json({ error: "Revisa los campos: precios, enlaces y datos de contacto deben ser válidos." }, 400);
       const c = state.content as SiteContent;
       const previous = await readContent(db);
       const grows = c.packages.length > previous.content.packages.length ? 1 : 0;
       const managedRefs = new Set(referencedMedia(c).filter(u => u.startsWith("/media/")).map(u => u.slice(7)));
-      for (const id of managedRefs) if (!await db.prepare("SELECT id FROM media_assets WHERE id = ? AND upload_state = 'ready'").bind(id).first()) return json({ error: "Un archivo no está disponible. Espera a que termine de subir o súbelo nuevamente." }, 400);
+      if(managedRefs.size&&await db.prepare("SELECT ref.value AS id FROM json_each(?) ref WHERE NOT EXISTS (SELECT 1 FROM media_assets asset WHERE asset.id=ref.value AND asset.upload_state='ready') LIMIT 1").bind(JSON.stringify([...managedRefs])).first()) return json({error:"Un archivo no está disponible. Espera a que termine de subir o súbelo nuevamente."},400);
       const refs = JSON.stringify([...managedRefs]);
       const readyGuard = " AND NOT EXISTS (SELECT 1 FROM json_each(?) ref WHERE NOT EXISTS (SELECT 1 FROM media_assets asset WHERE asset.id = ref.value AND asset.upload_state = 'ready'))";
       const result = state.revision === 0

@@ -40,3 +40,13 @@ El PR #1 original contenía una adaptación pendiente a Supabase y estaba en con
 - Compilación del frontend público y del Worker con los helpers de Sites.
 
 Los resultados de producción se registran en `VERIFICACION_CLOUDFLARE.md` después de la publicación.
+
+## Orden, inicio y catálogos multimedia
+
+- Fotos y videos: el selector Posición y los botones Primero / Último cambian el orden de la galería. No hay que arrastrar desde el celular.
+- Contenido del inicio: marca solo los archivos que quieras mostrar. Ordena esa lista de forma independiente. El primero ocupa la portada; los siguientes pueden recorrerse con las flechas y se muestran inmediatamente debajo. Los videos de portada arrancan sin sonido; Ver video con sonido abre el reproductor.
+- Catálogos y precios: cada catálogo admite hasta 20 fotos o videos propios, subidos desde el celular o elegidos de la galería. Se pueden ordenar, ocultar y retirar individualmente. Al subir videos se mantiene el editor para recortar y comprimir.
+- Pulsa Guardar cambios. La selección y los tres órdenes se guardan en D1; el público consulta la misma API al entrar y cada 30 segundos con la pestaña visible. Ninguna de estas preferencias depende de localStorage.
+- Retirar una publicación del inicio o de un catálogo no borra el archivo de R2. Archivos impide borrar un archivo usado por otro catálogo o por la galería.
+
+Validación de esta ampliación: 110 comprobaciones funcionales y de seguridad en D1/R2 local, TypeScript y 8 páginas públicas; pruebas de interfaz de movimiento del tercero al primero, video de portada silenciado y navegación entre adjuntos de un catálogo.

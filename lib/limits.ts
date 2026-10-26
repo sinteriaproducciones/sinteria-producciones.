@@ -5,6 +5,7 @@ export const SITE_LIMITS = {
   videoBytes: 20 * 1024 * 1024,
   videoSeconds: 60,
   catalogs: 60,
+  catalogMedia: 20,
   galleryItems: 150,
   files: 300,
 } as const;
