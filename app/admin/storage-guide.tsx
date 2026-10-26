@@ -9,7 +9,7 @@ export default function StorageGuide({ used, files, catalogs, gallery }: { used:
     <div className="storage-counts"><span>Catálogos: <strong>{catalogs} / 60</strong></span><span>Galería: <strong>{gallery} / 150</strong></span><span>Archivos: <strong>{files} / 300</strong></span></div>
     <details><summary>Cómo subir más contenido y cuidar tu espacio</summary><ol>
       <li>Fotos JPG, PNG o WebP: máximo <strong>8 MB por archivo</strong>.</li>
-      <li>Clips MP4 o WebM: máximo <strong>60 segundos y 20 MB por archivo</strong>. Para buena calidad y menor peso, exporta a 720p.</li>
+      <li>Clips MP4 o WebM: máximo <strong>60 segundos y 20 MB por archivo</strong>. Si tu video es más largo o pesado, el panel te permite elegir un fragmento y reducirlo antes de subir.</li>
       <li>Los videos largos pueden enlazarse desde YouTube o Shorts. Ese enlace no guarda el video aquí.</li>
       <li>Los borradores, fotos de catálogo, portadas y vistas previas de video también ocupan espacio.</li>
       <li>Para liberar espacio, retira la foto o el video de donde se usa, guarda los cambios y elimínalo desde Archivos. Ocultarlo o quitarlo de la galería no elimina el archivo.</li>

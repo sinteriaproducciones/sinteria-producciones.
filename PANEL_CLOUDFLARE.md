@@ -12,6 +12,7 @@ La contraseña se configura únicamente como hash en los secretos del servidor. 
 - Desliza el menú de secciones horizontalmente cuando uses un celular.
 - En **Catálogos y precios**, abre un catálogo, cambia el precio en soles y pulsa **Guardar cambios**. El tipo **Personaje individual** permite añadir personajes; también hay planes, combos y shows.
 - Para cambiar fotos de un catálogo o de la portada, selecciona **Cambiar imagen**, elige la foto y guarda. En **Fotos y videos** puedes subir, titular, ordenar y ocultar publicaciones. Una foto se puede reemplazar desde **Cambiar fotografía**.
+- Al seleccionar un video se abre **Recortar y reducir video**. El original puede superar 20 MB o 60 segundos: elige cualquier fragmento de hasta un minuto, ajusta su inicio y final, revisa la selección y pulsa **Recortar y reducir**. Puedes elegir la calidad y quitar el sonido. Revisa el resultado y pulsa **Subir este video**. El archivo original del celular se conserva. Los videos que ya cumplen los límites pueden subirse con **Subir original**. Después pulsa **Guardar cambios** para publicar.
 - En **Servicios** puedes editar su nombre, precio, descripción, foto y visibilidad.
 - En **Promociones**, elige porcentaje o monto en soles, los catálogos afectados y las fechas opcionales en hora de Lima. Los descuentos activos se aplican al catálogo. Si coinciden varios se usa el mejor precio, sin acumularlos.
 - En **Textos e imágenes** puedes buscar textos públicos y reemplazar imágenes de las secciones internas.
